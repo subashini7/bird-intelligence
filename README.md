@@ -7,6 +7,8 @@ Standard AI models often lack the context to know that a specific bird shouldn't
 
 ## ✨ Key Features
 - **Apple Photos Integration:** Automatically writes species names as searchable keywords (Keywords/Tags) into your Photos app.
+- **Multi-Region Support:** Configure for different regions (US, Singapore) with region-specific classifiers and scientific-to-common name conversion.
+- **Local Model Loading:** Avoid Hugging Face downloads by using local fine-tuned checkpoints (e.g., `singapore_probe_best.pth`).
 - **Bio-Geographic Overrides:** Spatial logic to correct species based on location (e.g., Island Scrub-Jay corrections).
 - **Taxonomic Grouping:** Combines confidence scores for difficult-to-distinguish groups (Hummingbirds, Gulls, Grebes).
 - **Quality Scoring:** Uses **NIQE** (Natural Image Quality Evaluator) to determine the sharpness of bird crops. Note that this still needs improvement. The image gets a good score when there are too many branches or a lower score if the bird is floating in water.
@@ -39,11 +41,24 @@ graph TD
     A[Apple Photos] --> B[osxphotos Library]
     B --> C[DETR: Object Detection]
     C --> D{Bird Count = 1?}
-    D -- Yes --> E[Binocular: Species ID]
-    E --> F[Logic Engine: Geo + Taxonomy]
-    F --> G[eBird API Verification]
-    G --> H[Write Keyword to Photos App]
+    D -- Yes --> E{Check TARGET_REGION}
     D -- No --> I[Log Count Only]
+    E -- US --> F1[Load Binocular from HF]
+    E -- Singapore --> F2[Load Local Model<br/>singapore_probe_best.pth]
+    F1 --> G1[Species ID]
+    F2 --> G1
+    G1 --> H{Region Config}
+    H -- US --> J1[Apply Geo + Taxonomy<br/>Logic Engine]
+    H -- Singapore --> J2[Convert Scientific<br/>to Common Name]
+    J1 --> K1{Confidence > 65%?}
+    J2 --> K2{Confidence > 65%?}
+    K1 -- Yes --> L1[Set refined_label]
+    K2 -- Yes --> L2[Set refined_label]
+    K1 -- No --> L3[No Label]
+    K2 -- No --> L3
+    L1 --> M[Write Keyword to<br/>Photos App]
+    L2 --> M
+    L3 --> M
 ```
 
 ## 💻 Setup & Installation
@@ -82,14 +97,54 @@ python inaturalist.py
 This script currently supports region-specific place IDs and saves images into folders like `processed_<region>_birds`.
 
 ## 🧪 Linear Probe and Fine-Tune DINOv2
-After collecting non-US bird images, use `probe_fine_tune.py` to:
+After collecting non-US bird images, use `dinov2_probe_fine_tune.py` to:
 - linear probe the DINOv2 model
 - fine-tune DINOv2 on your region-specific bird data
 
 This makes the model more adapted to your local species and image distribution.
 
+Example:
+```bash
+python dinov2_probe_fine_tune.py --epochs 30 --lr 2e-4 --freeze_encoder --experiment_name probe
+```
+
 ## 🔧 About `main.py`
-`main.py` currently uses a US-focused classifier and hard-coded regional assumptions. In the future, it can be updated to use a region-specific classifier trained on data from `inaturalist.py` and `probe_fine_tune.py`.
+`main.py` now supports region-specific classifiers and scientific-to-common name conversion. The script can be configured to use different bird classifiers for different regions (e.g., US or Singapore).
+
+### Configuration
+Edit the `TARGET_REGION` and `REGION_CONFIG` at the top of `main.py`:
+
+```python
+TARGET_REGION = "Singapore"  # Set to "US" or "Singapore"
+
+REGION_CONFIG = {
+    "US": {
+        "country_codes": {"US"},
+        "classifier": {
+            "repo_id": "jiujiuche/binocular",
+            "filename": "artifacts/dinov2_vitb14_nabirds.pth",
+        },
+        "use_scientific_to_common": False,
+    },
+    "Singapore": {
+        "country_codes": {"SG"},
+        "classifier": {
+            "repo_id": "jiujiuche/binocular",
+            "filename": "singapore_probe_best.pth",
+            "local_path": "singapore_probe_best.pth",  # Local model avoids Hugging Face downloads
+        },
+        "use_scientific_to_common": True,
+        "mapping_csv": "regional_birds.csv",
+    },
+}
+```
+
+### Region-Specific Features
+- **US Region:** Uses the default Binocular classifier with geographic overrides.
+- **Singapore Region:** 
+  - Loads a fine-tuned local model (`singapore_probe_best.pth`) to work with Singapore birds.
+  - Converts scientific species names to common names using `regional_birds.csv`.
+  - Uses a simplified refined label rule: if top-1 confidence > 65%, apply that label.
 
 ## ⚖️ License
-This project is licensed under the MIT License. Models used: [Facebook DETR](https://huggingface.co) and [Binocular Bird Classifier](https://huggingface.co`).
+This project is licensed under the MIT License. Models used: [Facebook DETR](https://huggingface.co) and [Binocular Bird Classifier](https://huggingface.co).
