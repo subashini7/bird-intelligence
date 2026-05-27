@@ -70,5 +70,26 @@ python main.py
 ```
 *Note: Ensure the Photos App is closed during database write operations.*
 
+## 🌍 Non-US Bird Data with iNaturalist
+If your birds are outside the US, use `inaturalist.py` to download species data for a country or region.
+- `inaturalist.py` can fetch bird observations from iNaturalist for a given region.
+- It can save around 30 bird images per species by downloading and cropping candidate photos.
+
+Example:
+```bash
+python inaturalist.py
+```
+This script currently supports region-specific place IDs and saves images into folders like `processed_<region>_birds`.
+
+## 🧪 Linear Probe and Fine-Tune DINOv2
+After collecting non-US bird images, use `probe_fine_tune.py` to:
+- linear probe the DINOv2 model
+- fine-tune DINOv2 on your region-specific bird data
+
+This makes the model more adapted to your local species and image distribution.
+
+## 🔧 About `main.py`
+`main.py` currently uses a US-focused classifier and hard-coded regional assumptions. In the future, it can be updated to use a region-specific classifier trained on data from `inaturalist.py` and `probe_fine_tune.py`.
+
 ## ⚖️ License
-This project is licensed under the MIT License. Models used: [Facebook DETR](https://huggingface.co) and [Binocular Bird Classifier](https://huggingface.co).
+This project is licensed under the MIT License. Models used: [Facebook DETR](https://huggingface.co) and [Binocular Bird Classifier](https://huggingface.co`).
