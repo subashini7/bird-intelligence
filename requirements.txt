@@ -1,7 +1,5 @@
 binocular-birds
-ebird-api
 huggingface_hub
-matplotlib
 opencv-python
 osxphotos
 pandas
@@ -10,7 +8,6 @@ photoscript
 pyiqa
 python-dotenv
 reverse_geocoder
-seaborn
 timm
 torch
 torchvision

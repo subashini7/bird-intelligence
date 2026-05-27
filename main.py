@@ -14,12 +14,12 @@ import torch
 import torch.nn as nn
 from Binocular.models.inference import InferenceModel
 from dotenv import load_dotenv
+from huggingface_hub import hf_hub_download
 from PIL import Image
 from torchvision import transforms
 from transformers import pipeline
 
 load_dotenv()
-EBIRD_API_KEY = os.getenv("EBIRD_KEY")
 HF_API = os.getenv("HF_TOKEN")
 BIRD_TAG_PREFIX = "Bird: "
 device = "mps" if torch.backends.mps.is_available() else "cpu"
@@ -33,15 +33,26 @@ REGION_CONFIG = {
         "classifier": {
             "repo_id": "jiujiuche/binocular",
             "filename": "artifacts/dinov2_vitb14_nabirds.pth",
+            "is_standalone": False,
         },
         "use_scientific_to_common": False,
     },
     "Singapore": {
         "country_codes": {"SG"},
         "classifier": {
-            "repo_id": "jiujiuche/binocular",
-            "filename": "singapore_probe_best.pth",
-            "local_path": "singapore_probe_best.pth",
+            "repo_id": "pshops/dinov2-singapore-birds",
+            "filename": "probe_best.pth",
+            "is_standalone": True,
+        },
+        "use_scientific_to_common": True,
+        "mapping_csv": "regional_birds.csv",
+    },
+    "India": {
+        "country_codes": {"IN"},
+        "classifier": {
+            "repo_id": "pshops/dinov2-india-birds",
+            "filename": "probe_best.pth",
+            "is_standalone": True,
         },
         "use_scientific_to_common": True,
         "mapping_csv": "regional_birds.csv",
@@ -583,15 +594,13 @@ if __name__ == "__main__":
     iqa_metric = pyiqa.create_metric("niqe", device=torch.device("cpu"))
 
     classifier_cfg = REGION_CONFIG.get(TARGET_REGION, REGION_CONFIG["US"])["classifier"]
-    local_classifier_path = classifier_cfg.get("local_path")
-    if local_classifier_path:
-        local_classifier_path = os.path.join(
-            os.path.dirname(__file__), local_classifier_path
+    is_standalone = classifier_cfg.get("is_standalone")
+    if is_standalone:
+        hf_checkpoint_path = hf_hub_download(
+            repo_id=classifier_cfg["repo_id"],
+            filename=classifier_cfg["filename"],
         )
-        if os.path.exists(local_classifier_path):
-            classifier = StandaloneInferenceModel(local_classifier_path, device=device)
-        else:
-            print("No classifier found at specified local path.")
+        classifier = StandaloneInferenceModel(hf_checkpoint_path, device=device)
     else:
         classifier = InferenceModel.from_pretrained(
             repo_id=classifier_cfg["repo_id"],

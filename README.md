@@ -8,11 +8,9 @@ Standard AI models often lack the context to know that a specific bird shouldn't
 ## ✨ Key Features
 - **Apple Photos Integration:** Automatically writes species names as searchable keywords (Keywords/Tags) into your Photos app.
 - **Multi-Region Support:** Configure for different regions (US, Singapore) with region-specific classifiers and scientific-to-common name conversion.
-- **Local Model Loading:** Avoid Hugging Face downloads by using local fine-tuned checkpoints (e.g., `singapore_probe_best.pth`).
 - **Bio-Geographic Overrides:** Spatial logic to correct species based on location (e.g., Island Scrub-Jay corrections).
 - **Taxonomic Grouping:** Combines confidence scores for difficult-to-distinguish groups (Hummingbirds, Gulls, Grebes).
 - **Quality Scoring:** Uses **NIQE** (Natural Image Quality Evaluator) to determine the sharpness of bird crops. Note that this still needs improvement. The image gets a good score when there are too many branches or a lower score if the bird is floating in water.
-- **eBird Verification:** Cross-references detections with real-time local sightings via the eBird API. TODO
 
 ## 📊 Logic Engine: Handling AI Inconsistencies
 APBI doesn't just take the top AI result. It applies specific rules to handle "look-alike" complexes:
@@ -50,7 +48,7 @@ graph TD
     G1 --> H{Region Config}
     H -- US --> J1[Apply Geo + Taxonomy<br/>Logic Engine]
     H -- Singapore --> J2[Convert Scientific<br/>to Common Name]
-    J1 --> K1{Confidence > 65%?}
+    J1 --> K1{Confidence > 99%?}
     J2 --> K2{Confidence > 65%?}
     K1 -- Yes --> L1[Set refined_label]
     K2 -- Yes --> L2[Set refined_label]
@@ -74,9 +72,8 @@ graph TD
    ```bash
    pip install -r requirements.txt
    ```
-3. Set your API keys in the script:
+3. Set your API key in the script:
    - `HF_API`: Your Hugging Face token.
-   - `EBIRD_API_KEY`: Your eBird developer key.
 
 ## 📝 Usage
 Run the main script to process your "Birds" album:
@@ -106,6 +103,7 @@ This makes the model more adapted to your local species and image distribution.
 Example:
 ```bash
 python dinov2_probe_fine_tune.py --epochs 30 --lr 2e-4 --freeze_encoder --experiment_name probe
+!python dinov2_probe_fine_tune.py --epochs 30 --lr 1e-5 --resume /kaggle/working/checkpoints/probe_best.pth --experiment_name finetune
 ```
 
 ## 🔧 About `main.py`
@@ -129,9 +127,9 @@ REGION_CONFIG = {
     "Singapore": {
         "country_codes": {"SG"},
         "classifier": {
-            "repo_id": "jiujiuche/binocular",
-            "filename": "singapore_probe_best.pth",
-            "local_path": "singapore_probe_best.pth",  # Local model avoids Hugging Face downloads
+            "repo_id": "pshops/dinov2-singapore-birds",
+            "filename": "probe_best.pth",
+            "is_standalone": True,
         },
         "use_scientific_to_common": True,
         "mapping_csv": "regional_birds.csv",

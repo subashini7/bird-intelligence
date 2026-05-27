@@ -2,11 +2,11 @@
 .env
 
 # --- Local Data & Logs ---
-*.csv
 *.log
 processed_*.zip
 processed_*/
 classified*.html
+classified_*.csv
 
 # --- Python Environment ---
 __pycache__/

@@ -9,6 +9,7 @@ from torch.utils.data import DataLoader, random_split, Dataset
 from torchvision import datasets, transforms
 from tqdm import tqdm
 
+# Within this path, <Species_Name> folder has up to 30 images of that species.
 DATA_ROOT = '/kaggle/input/datasets/jupiter79/india-birds/processed_singapore_birds/processed_singapore_birds'
 OUTPUT_BASE = '/kaggle/working'
 
