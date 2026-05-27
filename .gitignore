@@ -1,0 +1,36 @@
+# --- API Keys & Credentials ---
+.env
+
+# --- Local Data & Logs ---
+*.csv
+*.log
+processed_*.zip
+processed_*/
+classified*.html
+
+# --- Python Environment ---
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+env/
+venv/
+.env/
+
+# --- macOS System Files ---
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+
+# --- AI Models & Weights ---
+# (Matches common paths where models are downloaded)
+.cache/
+artifacts/
+*.pth
+*.bin
+*.h5
+
+# --- IDEs ---
+.vscode/
+.idea/

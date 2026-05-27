@@ -1,0 +1,17 @@
+binocular-birds
+ebird-api
+huggingface_hub
+matplotlib
+opencv-python
+osxphotos
+pandas
+pillow
+photoscript
+pyiqa
+python-dotenv
+reverse_geocoder
+seaborn
+timm
+torch
+torchvision
+transformers
