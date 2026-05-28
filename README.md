@@ -1,37 +1,68 @@
-# Apple Photos Bird Intelligence - APBI
+# Apple Photos Bird Intelligence (APBI)
 
-Apple Photos Bird Intelligence is a specialized pipeline that bridges the gap between raw AI object detection and expert-level birding logic. It scans your Apple Photos library, detects, counts and classifies birds, and applies bio-geographic overrides to ensure your metadata reflects biological reality, not just AI guesses.
+Apple Photos Bird Intelligence is a specialized pipeline that bridges the gap between raw AI object detection and expert-level birding logic. It scans your Apple Photos library, detects, counts, and classifies birds, then applies bio-geographic overrides to ensure your metadata reflects biological reality — not just AI guesses.
 
 ## 🚀 The Core Concept
 Standard AI models often lack the context to know that a specific bird shouldn't exist in a certain location. This module uses spatial metadata and taxonomic grouping to "clean" identification results before writing them back to your Photos library as searchable keywords.
 
 ## ✨ Key Features
-- **Apple Photos Integration:** Automatically writes species names as searchable keywords (Keywords/Tags) into your Photos app.
-- **Multi-Region Support:** Configure for different regions (US, Singapore) with region-specific classifiers and scientific-to-common name conversion.
-- **Bio-Geographic Overrides:** Spatial logic to correct species based on location (e.g., Island Scrub-Jay corrections).
-- **Taxonomic Grouping:** Combines confidence scores for difficult-to-distinguish groups (Hummingbirds, Gulls, Grebes).
-- **Quality Scoring:** Uses **NIQE** (Natural Image Quality Evaluator) to determine the sharpness of bird crops. Note that this still needs improvement. The image gets a good score when there are too many branches or a lower score if the bird is floating in water.
+- **Apple Photos Integration:** Automatically writes species names as searchable keywords into your Photos app.
+- **Multi-Region Support:** Configure for US, Singapore, India, or UK — each with region-specific classifiers, confidence thresholds, and species corrections.
+- **Scientific-to-Common Name Conversion:** Non-US regions map scientific model output to common names via `regional_birds.csv`.
+- **Bio-Geographic Overrides:** Spatial logic corrects species based on GPS coordinates (e.g., Island Scrub-Jay vs California Scrub-Jay).
+- **Taxonomic Grouping:** Combines confidence scores for difficult-to-distinguish groups (Hummingbirds, Gulls, Grebes, Cranes).
+- **Quality Scoring:** Uses **NIQE** (Natural Image Quality Evaluator) to score sharpness of bird crops. Note: images with water or heavy foliage can skew scores; this metric is still being refined.
 
 ## 📊 Logic Engine: Handling AI Inconsistencies
-APBI doesn't just take the top AI result. It applies specific rules to handle "look-alike" complexes:
 
-### 1. Spatial Logic (The Island Rule)
-If the AI identifies a **Western Scrub-Jay** but the GPS coordinates place it in the **Channel Islands**, the script automatically renames it to the endemic **Island Scrub-Jay**.
+APBI doesn't just take the top AI result. It applies a layered set of rules to handle "look-alike" species complexes.
 
-### 2. Confidence Summing (Complex Groups)
-For species that are notoriously difficult for AI to split, APBI sums the top two results. If the sum is > 99%, it uses a broader, more accurate label:
+### 1. Spatial Logic (US Only)
+If the AI identifies a **Western Scrub-Jay** but GPS coordinates place it in the **Channel Islands**, the script automatically renames it to the endemic **Island Scrub-Jay**.
 
+### 2. Confidence Summing — Complex Groups (US Only)
+For species that are notoriously difficult for AI to split, APBI sums the top two confidence scores. If the sum exceeds 99%, it uses a broader, more accurate label:
 
 | AI Top 2 Candidates | Summed Conf | Final Label |
 | :--- | :--- | :--- |
-| Western Grebe / Clark's Grebe | > 99% | **Western/Clark Grebe** |
+| Western Grebe / Clark's Grebe | > 99% | **Western/Clark's Grebe** |
 | Any two Hummingbirds | > 99% | **Hummingbird** |
-| Gulls / Terns / Loons | > 99% | **[Group Name]** |
-| Sandhill / Whooping Crane | > 99% | **Crane** |
+| Any two Gulls | > 99% | **Gull** |
+| Subspecies of the same species | > 99% | **Base species name** |
 
-### 3. Safety Labeling
+### 3. Safety Labeling (US Only)
 - **Green Heron:** Labeled as "Green Heron or Young Black-crowned Night-Heron" to account for frequent juvenile misidentification.
-- **Cranes:** Detections are generalized to "Crane" to prevent false positives for the endangered Whooping Crane.
+- **Cranes:** Generalized to "Crane" to prevent false positives for the endangered Whooping Crane.
+
+### 4. Known Misclassification Corrections
+
+Each region maintains a corrections table to fix systematic model errors:
+
+**US**
+| Model Predicts | Corrected To |
+| :--- | :--- |
+| Tennessee Warbler | Orange-crowned Warbler |
+| Pileated Woodpecker | White-headed Woodpecker |
+| Snow Goose | Ross's Goose |
+| Surfbird | Dunlin |
+| Downy Woodpecker | Hairy Woodpecker |
+| Wilson's Phalarope | Red-necked Phalarope |
+
+**UK** (confidence threshold: > 30%)
+| Model Predicts | Corrected To |
+| :--- | :--- |
+| Whooper Swan | Mute Swan |
+| Marsh Sandpiper | Common Greenshank |
+
+**India** (confidence threshold: > 31%)
+| Model Predicts | Corrected To |
+| :--- | :--- |
+| Great White Pelican | Spot-billed Pelican |
+| Ring-billed Gull | Common Gull |
+| Tawny Eagle | Black Kite |
+| Dusky Crag-Martin | Little Cormorant |
+| Thick-billed Flowerpecker | Ashy Woodswallow |
+| Blue-cheeked Bee-eater | Blue-tailed Bee-eater |
 
 ## 🛠️ Architecture
 ```mermaid
@@ -41,30 +72,32 @@ graph TD
     C --> D{Bird Count = 1?}
     D -- Yes --> E{Check TARGET_REGION}
     D -- No --> I[Log Count Only]
-    E -- US --> F1[Load Binocular from HF]
-    E -- Singapore --> F2[Load Local Model<br/>singapore_probe_best.pth]
-    F1 --> G1[Species ID]
-    F2 --> G1
-    G1 --> H{Region Config}
-    H -- US --> J1[Apply Geo + Taxonomy<br/>Logic Engine]
-    H -- Singapore --> J2[Convert Scientific<br/>to Common Name]
-    J1 --> K1{Confidence > 99%?}
-    J2 --> K2{Confidence > 65%?}
-    K1 -- Yes --> L1[Set refined_label]
-    K2 -- Yes --> L2[Set refined_label]
-    K1 -- No --> L3[No Label]
-    K2 -- No --> L3
-    L1 --> M[Write Keyword to<br/>Photos App]
-    L2 --> M
-    L3 --> M
+    E -- US --> F1[Binocular Model from HF]
+    E -- Singapore --> F2[StandaloneInferenceModel<br/>probe_best.pth]
+    E -- India --> F3[StandaloneInferenceModel<br/>fine_tune_best.pth]
+    E -- UK --> F4[StandaloneInferenceModel<br/>fine_tune_best.pth]
+    F1 --> G[Species ID]
+    F2 --> G
+    F3 --> G
+    F4 --> G
+    G --> H{Apply Region Logic}
+    H -- US --> J1[Geo + Taxonomy Rules<br/>Conf > 99%]
+    H -- Singapore --> J2[Scientific → Common Name<br/>Conf > 40%]
+    H -- India --> J3[Scientific → Common Name<br/>Corrections · Conf > 31%]
+    H -- UK --> J4[Scientific → Common Name<br/>Corrections · Conf > 30%]
+    J1 --> K[Set refined_label]
+    J2 --> K
+    J3 --> K
+    J4 --> K
+    K --> M[Write Keyword to Photos App]
 ```
 
 ## 💻 Setup & Installation
 
 ### Requirements
-- **macOS** (For Apple Photos access)
+- **macOS** (required for Apple Photos access)
 - **Python 3.11+**
-- **eBird API Key**
+- **Hugging Face API token** (`HF_TOKEN` in your `.env` file)
 
 ### Installation
 1. Clone the repository.
@@ -72,48 +105,24 @@ graph TD
    ```bash
    pip install -r requirements.txt
    ```
-3. Set your API key in the script:
-   - `HF_API`: Your Hugging Face token.
+3. Create a `.env` file and add your Hugging Face token:
+   ```
+   HF_TOKEN=your_token_here
+   ```
 
 ## 📝 Usage
 Run the main script to process your "Birds" album:
 ```bash
 python main.py
 ```
-*Note: Ensure the Photos App is closed during database write operations.*
+> **Note:** Ensure Photos is closed during database write operations to avoid conflicts.
 
-## 🌍 Non-US Bird Data with iNaturalist
-If your birds are outside the US, use `inaturalist.py` to download species data for a country or region.
-- `inaturalist.py` can fetch bird observations from iNaturalist for a given region.
-- It can save around 30 bird images per species by downloading and cropping candidate photos.
+## ⚙️ Configuration
 
-Example:
-```bash
-python inaturalist.py
-```
-This script currently supports region-specific place IDs and saves images into folders like `processed_<region>_birds`.
-
-## 🧪 Linear Probe and Fine-Tune DINOv2
-After collecting non-US bird images, use `dinov2_probe_fine_tune.py` to:
-- linear probe the DINOv2 model
-- fine-tune DINOv2 on your region-specific bird data
-
-This makes the model more adapted to your local species and image distribution. Upload the model into Hugging Face.
-
-Example:
-```bash
-python dinov2_probe_fine_tune.py --epochs 30 --lr 2e-4 --freeze_encoder --experiment_name probe
-python dinov2_probe_fine_tune.py --epochs 30 --lr 1e-5 --resume <path to probe_best.pth> --experiment_name finetune
-```
-
-## 🔧 About `main.py`
-`main.py` now supports region-specific classifiers and scientific-to-common name conversion. The script can be configured to use different bird classifiers for different regions (e.g., US or Singapore or India or UK).
-
-### Configuration
-Edit the `TARGET_REGION` and `REGION_CONFIG` at the top of `main.py`:
+Edit `TARGET_REGION` and `REGION_CONFIG` at the top of `main.py`:
 
 ```python
-TARGET_REGION = "Singapore"  # Set to "US" or "Singapore" or "UK" or "India"
+TARGET_REGION = "India"  # Options: "US", "Singapore", "India", "UK"
 
 REGION_CONFIG = {
     "US": {
@@ -121,6 +130,7 @@ REGION_CONFIG = {
         "classifier": {
             "repo_id": "jiujiuche/binocular",
             "filename": "artifacts/dinov2_vitb14_nabirds.pth",
+            "is_standalone": False,
         },
         "use_scientific_to_common": False,
     },
@@ -134,15 +144,61 @@ REGION_CONFIG = {
         "use_scientific_to_common": True,
         "mapping_csv": "regional_birds.csv",
     },
+    "India": {
+        "country_codes": {"IN"},
+        "classifier": {
+            "repo_id": "pshops/dinov2-india-birds",
+            "filename": "fine_tune_best.pth",
+            "is_standalone": True,
+        },
+        "use_scientific_to_common": True,
+        "mapping_csv": "regional_birds.csv",
+    },
+    "UK": {
+        "country_codes": {"GB"},
+        "classifier": {
+            "repo_id": "pshops/dinov2-uk-birds",
+            "filename": "fine_tune_best.pth",
+            "is_standalone": True,
+        },
+        "use_scientific_to_common": True,
+        "mapping_csv": "regional_birds.csv",
+    },
 }
 ```
 
-### Region-Specific Features
-- **US Region:** Uses the default Binocular classifier with geographic overrides.
-- **Other Regions:** 
-  - Loads a fine-tuned model from hugging face to work with that regions birds.
-  - Converts scientific species names to common names using `regional_birds.csv`.
-  - Uses a simplified refined label rule: if top-1 confidence > X%, apply that label.
+### Region Behaviour Summary
+| Region | Model Source | Confidence Threshold | Name Conversion | Extra Logic |
+| :--- | :--- | :--- | :--- | :--- |
+| US | Binocular (HF) | 99% | — | Geo overrides, taxonomy grouping |
+| Singapore | Standalone (HF) | 40% | Scientific → Common | — |
+| India | Standalone (HF) | 31% | Scientific → Common | Species corrections |
+| UK | Standalone (HF) | 30% | Scientific → Common | Species corrections |
+
+## 🌍 Non-US Bird Data with iNaturalist
+For regions outside the US, use `inaturalist.py` to download training data.
+- Fetches bird observations from iNaturalist for a given region or place ID.
+- Downloads and crops approximately 30 images per species.
+- Saves images into folders named `processed_<region>_birds`.
+
+```bash
+python inaturalist.py
+```
+
+## 🧪 Training: Linear Probe and Fine-Tune DINOv2
+After collecting regional images, use `dinov2_probe_fine_tune.py` to adapt the model:
+- **Linear probe** — trains a classification head on frozen DINOv2 features.
+- **Fine-tune** — unfreezes the encoder for deeper adaptation to local species.
+
+Upload the resulting checkpoint to Hugging Face for use in `REGION_CONFIG`.
+
+```bash
+# Step 1: linear probe
+python dinov2_probe_fine_tune.py --epochs 30 --lr 2e-4 --freeze_encoder --experiment_name probe
+
+# Step 2: fine-tune from probe checkpoint
+python dinov2_probe_fine_tune.py --epochs 30 --lr 1e-5 --resume <path_to_probe_best.pth> --experiment_name finetune
+```
 
 ## ⚖️ License
-This project is licensed under the MIT License. Models used: [Facebook DETR](https://huggingface.co) and [Binocular Bird Classifier](https://huggingface.co).
+This project is licensed under the MIT License. Models used: [Facebook DETR](https://huggingface.co/facebook/detr-resnet-50) and [Binocular Bird Classifier](https://huggingface.co/jiujiuche/binocular).
