@@ -3,6 +3,7 @@
 
 # --- Local Data & Logs ---
 *.log
+*.png
 processed_*.zip
 processed_*/
 classified*.html

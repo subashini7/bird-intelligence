@@ -8,7 +8,7 @@ India,Milvus migrans,Black Kite,1323
 India,Copsychus saularis,Oriental Magpie-Robin,1288
 India,Spilopelia senegalensis,Laughing Dove,1259
 India,Cinnyris asiaticus,Purple Sunbird,1225
-India,Vanellus indicus,Red-wattled Lapwing,1197
+India,Vanellus indicus,Red-wattled Lapwing,1198
 India,Psittacula krameri,Rose-ringed Parakeet,1165
 India,Passer domesticus,House Sparrow,1162
 India,Ardea coromanda,Eastern Cattle-Egret,1157
@@ -27,7 +27,7 @@ India,Ploceus philippinus,Baya Weaver,894
 India,Leptocoma zeylonica,Purple-rumped Sunbird,851
 India,Himantopus himantopus,Black-winged Stilt,846
 India,Tachyspiza badia,Shikra,827
-India,Anas poecilorhyncha,Indian Spot-billed Duck,821
+India,Anas poecilorhyncha,Indian Spot-billed Duck,822
 India,Ardea cinerea,Grey Heron,818
 India,Mycteria leucocephala,Painted Stork,809
 India,Pycnonotus jocosus,Red-whiskered Bulbul,761
@@ -500,29 +500,29 @@ India,Anarhynchus asiaticus,Caspian Plover,2
 India,Sypheotides indicus,Lesser Florican,1
 India,Meleagris gallopavo,Wild Turkey,1
 Singapore,Gallus gallus,Red Junglefowl,7226
-Singapore,Pycnonotus goiavier,Yellow-vented Bulbul,5986
-Singapore,Acridotheres javanicus,Javan Myna,5344
-Singapore,Treron vernans,Pink-necked Green-Pigeon,4484
+Singapore,Pycnonotus goiavier,Yellow-vented Bulbul,5988
+Singapore,Acridotheres javanicus,Javan Myna,5343
+Singapore,Treron vernans,Pink-necked Green-Pigeon,4485
 Singapore,Amaurornis phoenicurus,White-breasted Waterhen,4432
-Singapore,Cinnyris ornatus,Ornate Sunbird,4213
-Singapore,Todiramphus chloris,Collared Kingfisher,3730
+Singapore,Cinnyris ornatus,Ornate Sunbird,4212
+Singapore,Todiramphus chloris,Collared Kingfisher,3731
 Singapore,Copsychus saularis,Oriental Magpie-Robin,3691
 Singapore,Geopelia striata,Zebra Dove,3616
 Singapore,Spilopelia chinensis,Spotted Dove,3599
 Singapore,Oriolus chinensis,Black-naped Oriole,3584
 Singapore,Anthracoceros albirostris,Oriental Pied Hornbill,3134
-Singapore,Columba livia,Rock Pigeon,3033
+Singapore,Columba livia,Rock Pigeon,3034
 Singapore,Aplonis panayensis,Asian Glossy Starling,2733
 Singapore,Ardea cinerea,Grey Heron,2694
-Singapore,Corvus splendens,House Crow,2672
-Singapore,Anthreptes malacensis,Brown-throated Sunbird,2527
-Singapore,Butorides atricapilla,Little Heron,2470
+Singapore,Corvus splendens,House Crow,2674
+Singapore,Anthreptes malacensis,Brown-throated Sunbird,2529
+Singapore,Butorides atricapilla,Little Heron,2471
 Singapore,Icthyophaga leucogaster,White-bellied Sea-Eagle,2454
-Singapore,Halcyon smyrnensis,White-throated Kingfisher,2342
+Singapore,Halcyon smyrnensis,White-throated Kingfisher,2352
 Singapore,Egretta garzetta,Little Egret,2338
 Singapore,Eudynamys scolopaceus,Asian Koel,2103
 Singapore,Pernis ptilorhynchus,Oriental Honey-buzzard,2052
-Singapore,Dicrurus paradiseus,Greater Racket-tailed Drongo,1904
+Singapore,Dicrurus paradiseus,Greater Racket-tailed Drongo,1906
 Singapore,Hirundo javanica,Pacific Swallow,1759
 Singapore,Merops viridis,Blue-throated Bee-eater,1746
 Singapore,Haliastur indus,Brahminy Kite,1713
@@ -534,7 +534,7 @@ Singapore,Rhipidura javanica,Malaysian Pied-Fantail,1628
 Singapore,Ardea purpurea,Purple Heron,1580
 Singapore,Psittacula alexandri,Red-breasted Parakeet,1561
 Singapore,Passer montanus,Eurasian Tree Sparrow,1519
-Singapore,Anastomus oscitans,Asian Openbill,1476
+Singapore,Anastomus oscitans,Asian Openbill,1477
 Singapore,Aethopyga siparaja,Crimson Sunbird,1408
 Singapore,Merops philippinus,Blue-tailed Bee-eater,1299
 Singapore,Dicaeum cruentatum,Scarlet-backed Flowerpecker,1274
@@ -544,15 +544,15 @@ Singapore,Eurystomus orientalis,Dollarbird,1215
 Singapore,Muscicapa dauurica,Asian Brown Flycatcher,1182
 Singapore,Garrulax leucolophus,White-crested Laughingthrush,1122
 Singapore,Ketupa ketupu,Buffy Fish-Owl,1109
-Singapore,Lanius schach,Long-tailed Shrike,1081
+Singapore,Lanius schach,Long-tailed Shrike,1082
+Singapore,Lonchura punctulata,Scaly-breasted Munia,1052
 Singapore,Mixornis gularis,Pin-striped Tit-Babbler,1051
-Singapore,Lonchura punctulata,Scaly-breasted Munia,1046
 Singapore,Pelargopsis capensis,Stork-billed Kingfisher,1018
 Singapore,Psilopogon lineatus,Lineated Barbet,1001
 Singapore,Orthotomus sutorius,Common Tailorbird,992
 Singapore,Pycnonotus zeylanicus,Straw-headed Bulbul,981
-Singapore,Ardea intermedia,Medium Egret,974
-Singapore,Nisaetus cirrhatus,Changeable Hawk-Eagle,955
+Singapore,Ardea intermedia,Medium Egret,975
+Singapore,Nisaetus cirrhatus,Changeable Hawk-Eagle,956
 Singapore,Tringa totanus,Common Redshank,914
 Singapore,Botaurus sinensis,Yellow Bittern,914
 Singapore,Aegithina tiphia,Common Iora,861
@@ -563,9 +563,9 @@ Singapore,Yungipicus moluccensis,Sunda Pygmy Woodpecker,745
 Singapore,Lanius cristatus,Brown Shrike,740
 Singapore,Picus vittatus,Laced Woodpecker,695
 Singapore,Caprimulgus macrurus,Large-tailed Nightjar,668
+Singapore,Anthus rufulus,Paddyfield Pipit,660
 Singapore,Chalcophaps indica,Asian Emerald Dove,656
 Singapore,Alcedo atthis,Common Kingfisher,655
-Singapore,Anthus rufulus,Paddyfield Pipit,655
 Singapore,Zosterops simplex,Swinhoe's White-eye,633
 Singapore,Lophospiza trivirgata,Crested Goshawk,622
 Singapore,Icthyophaga ichthyaetus,Gray-headed Fish-Eagle,616
@@ -577,14 +577,14 @@ Singapore,Anarhynchus peronii,Malaysian Plover,530
 Singapore,Pycnonotus jocosus,Red-whiskered Bulbul,526
 Singapore,Dicaeum trigonostigma,Orange-bellied Flowerpecker,515
 Singapore,Strix seloputo,Spotted Wood-Owl,502
-Singapore,Leptocoma calcostetha,Copper-throated Sunbird,490
+Singapore,Leptocoma calcostetha,Copper-throated Sunbird,491
+Singapore,Dendrocygna javanica,Lesser Whistling-Duck,488
 Singapore,Phylloscopus borealis,Arctic Warbler,487
-Singapore,Ardea sumatrana,Great-billed Heron,483
+Singapore,Ardea sumatrana,Great-billed Heron,481
 Singapore,Copsychus malabaricus,White-rumped Shama,480
-Singapore,Dendrocygna javanica,Lesser Whistling-Duck,479
 Singapore,Cacatua goffiniana,Tanimbar Corella,479
 Singapore,Psittacula longicauda,Long-tailed Parakeet,478
-Singapore,Mycteria cinerea × leucocephala,Milky × Painted Stork,466
+Singapore,Mycteria cinerea × leucocephala,Milky × Painted Stork,467
 Singapore,Lalage nigra,Pied Triller,435
 Singapore,Loriculus galgulus,Blue-crowned Hanging-Parrot,420
 Singapore,Vanellus indicus,Red-wattled Lapwing,411
@@ -592,23 +592,23 @@ Singapore,Tachyspiza gularis,Japanese Sparrowhawk,378
 Singapore,Pluvialis fulva,Pacific Golden-Plover,376
 Singapore,Anarhynchus atrifrons,Tibetan Sand-Plover,371
 Singapore,Ploceus philippinus,Baya Weaver,356
-Singapore,Pycnonotus aurigaster,Sooty-headed Bulbul,334
+Singapore,Pycnonotus aurigaster,Sooty-headed Bulbul,335
 Singapore,Mycteria leucocephala,Painted Stork,324
 Singapore,Orthotomus atrogularis,Dark-necked Tailorbird,321
 Singapore,Ardea coromanda,Eastern Cattle-Egret,320
 Singapore,Psilopogon haemacephalus,Coppersmith Barbet,319
 Singapore,Cygnus atratus,Black Swan,318
-Singapore,Otus lettia,Collared Scops-Owl,315
+Singapore,Otus lettia,Collared Scops-Owl,316
 Singapore,Pitta moluccensis,Blue-winged Pitta,305
+Singapore,Sternula albifrons,Little Tern,294
 Singapore,Lanius tigrinus,Tiger Shrike,293
-Singapore,Sternula albifrons,Little Tern,293
 Singapore,Ardeola bacchus,Chinese Pond-Heron,290
 Singapore,Lonchura leucogastroides,Javan Munia,290
 Singapore,Ninox scutulata,Brown Boobook,285
-Singapore,Ploceus jacksoni,Golden-backed Weaver,281
-Singapore,Alcedo meninting,Blue-eared Kingfisher,277
-Singapore,Irena puella,Asian Fairy-bluebird,263
-Singapore,Lonchura atricapilla,Chestnut Munia,262
+Singapore,Ploceus jacksoni,Golden-backed Weaver,282
+Singapore,Alcedo meninting,Blue-eared Kingfisher,278
+Singapore,Lonchura atricapilla,Chestnut Munia,267
+Singapore,Irena puella,Asian Fairy-bluebird,264
 Singapore,Rallina fasciata,Red-legged Crake,260
 Singapore,Aviceda leuphotes,Black Baza,255
 Singapore,Ficedula zanthopygia,Yellow-rumped Flycatcher,254
@@ -617,9 +617,9 @@ Singapore,Anhinga melanogaster,Oriental Darter,222
 Singapore,Corvus macrorhynchos,Large-billed Crow,216
 Singapore,Hirundo rustica,Barn Swallow,215
 Singapore,Tringa nebularia,Common Greenshank,211
+Singapore,Myiopsitta monachus,Monk Parakeet,208
 Singapore,Micropternus brachyurus,Rufous Woodpecker,208
 Singapore,Cuculus micropterus,Indian Cuckoo,207
-Singapore,Myiopsitta monachus,Monk Parakeet,206
 Singapore,Lewinia striata,Slaty-breasted Rail,206
 Singapore,Lonchura maja,White-headed Munia,205
 Singapore,Egretta sacra,Pacific Reef Heron,203
@@ -636,9 +636,9 @@ Singapore,Anarhynchus alexandrinus,Kentish Plover,160
 Singapore,Leptoptilos javanicus,Lesser Adjutant,158
 Singapore,Estrilda melpoda,Orange-cheeked Waxbill,157
 Singapore,Arachnothera longirostra,Little Spiderhunter,155
+Singapore,Estrilda astrild,Common Waxbill,152
 Singapore,Pericrocotus divaricatus,Ashy Minivet,148
 Singapore,Pitta megarhyncha,Mangrove Pitta,148
-Singapore,Estrilda astrild,Common Waxbill,145
 Singapore,Pitta sordida,Western Hooded Pitta,145
 Singapore,Tachybaptus ruficollis,Little Grebe,144
 Singapore,Ceyx erithaca,Black-backed Dwarf Kingfisher,144
@@ -648,9 +648,9 @@ Singapore,Trichoglossus haematodus,Coconut Lorikeet,139
 Singapore,Phaenicophaeus sumatranus,Chestnut-bellied Malkoha,133
 Singapore,Motacilla tschutschensis,Eastern Yellow Wagtail,133
 Singapore,Chalcites minutillus,Little Bronze Cuckoo,133
+Singapore,Zapornia fusca,Ruddy-breasted Crake,130
 Singapore,Clamator coromandus,Chestnut-winged Cuckoo,129
 Singapore,Agropsar sturninus,Daurian Starling,128
-Singapore,Zapornia fusca,Ruddy-breasted Crake,127
 Singapore,Buceros rhinoceros,Rhinoceros Hornbill,125
 Singapore,Ficedula mugimaki,Mugimaki Flycatcher,122
 Singapore,Spilornis cheela,Crested Serpent-Eagle,121
@@ -691,7 +691,7 @@ Singapore,Botaurus cinnamomeus,Cinnamon Bittern,73
 Singapore,Muscicapa ferruginea,Ferruginous Flycatcher,72
 Singapore,Phylloscopus coronatus,Eastern Crowned Warbler,71
 Singapore,Ficedula elisae,Green-backed Flycatcher,71
-Singapore,Crithagra mozambica,Yellow-fronted Canary,65
+Singapore,Crithagra mozambica,Yellow-fronted Canary,66
 Singapore,Orthotomus sericeus,Rufous-tailed Tailorbird,64
 Singapore,Thinornis dubius,Little Ringed Plover,63
 Singapore,Streptopelia tranquebarica,Red Collared-Dove,62
@@ -956,197 +956,197 @@ Singapore,Pericrocotus speciosus,Scarlet Minivet,1
 Singapore,Radjah radjah,Radjah Shelduck,1
 Singapore,Meiglyptes grammithorax,Buff-rumped Woodpecker,1
 Singapore,Trichoglossus borneus,Red Lory,1
-United Kingdom,Anas platyrhynchos,Mallard,40253
-United Kingdom,Erithacus rubecula,European Robin,39208
-United Kingdom,Columba palumbus,Common Wood-Pigeon,30668
-United Kingdom,Turdus merula,Eurasian Blackbird,29356
-United Kingdom,Cygnus olor,Mute Swan,25851
-United Kingdom,Ardea cinerea,Grey Heron,24660
-United Kingdom,Pica pica,Eurasian Magpie,22641
-United Kingdom,Corvus corone,Carrion Crow,22637
-United Kingdom,Chroicocephalus ridibundus,Black-headed Gull,22428
-United Kingdom,Gallinula chloropus,Common Moorhen,21563
-United Kingdom,Cyanistes caeruleus,Eurasian Blue Tit,20928
-United Kingdom,Branta canadensis,Canada Goose,20698
-United Kingdom,Larus argentatus,European Herring Gull,19947
-United Kingdom,Fulica atra,Eurasian Coot,18594
-United Kingdom,Passer domesticus,House Sparrow,17061
-United Kingdom,Anser anser,Greylag Goose,16230
-United Kingdom,Carduelis carduelis,European Goldfinch,16116
+United Kingdom,Anas platyrhynchos,Mallard,40262
+United Kingdom,Erithacus rubecula,European Robin,39210
+United Kingdom,Columba palumbus,Common Wood-Pigeon,30674
+United Kingdom,Turdus merula,Eurasian Blackbird,29363
+United Kingdom,Cygnus olor,Mute Swan,25856
+United Kingdom,Ardea cinerea,Grey Heron,24666
+United Kingdom,Pica pica,Eurasian Magpie,22646
+United Kingdom,Corvus corone,Carrion Crow,22638
+United Kingdom,Chroicocephalus ridibundus,Black-headed Gull,22429
+United Kingdom,Gallinula chloropus,Common Moorhen,21564
+United Kingdom,Cyanistes caeruleus,Eurasian Blue Tit,20929
+United Kingdom,Branta canadensis,Canada Goose,20700
+United Kingdom,Larus argentatus,European Herring Gull,19952
+United Kingdom,Fulica atra,Eurasian Coot,18597
+United Kingdom,Passer domesticus,House Sparrow,17062
+United Kingdom,Anser anser,Greylag Goose,16234
+United Kingdom,Carduelis carduelis,European Goldfinch,16117
 United Kingdom,Columba livia,Rock Pigeon,15927
-United Kingdom,Fringilla coelebs,Common Chaffinch,15871
-United Kingdom,Parus major,Great Tit,15851
-United Kingdom,Phalacrocorax carbo,Great Cormorant,15363
-United Kingdom,Coloeus monedula,Eurasian Jackdaw,15103
-United Kingdom,Sturnus vulgaris,European Starling,15068
-United Kingdom,Buteo buteo,Common Buzzard,14388
-United Kingdom,Motacilla alba,White Wagtail,13989
+United Kingdom,Fringilla coelebs,Common Chaffinch,15875
+United Kingdom,Parus major,Great Tit,15852
+United Kingdom,Phalacrocorax carbo,Great Cormorant,15364
+United Kingdom,Coloeus monedula,Eurasian Jackdaw,15107
+United Kingdom,Sturnus vulgaris,European Starling,15070
+United Kingdom,Buteo buteo,Common Buzzard,14390
+United Kingdom,Motacilla alba,White Wagtail,13990
 United Kingdom,Aythya fuligula,Tufted Duck,13935
-United Kingdom,Prunella modularis,Dunnock,13303
-United Kingdom,Phasianus colchicus,Ring-necked Pheasant,11515
-United Kingdom,Haematopus ostralegus,Eurasian Oystercatcher,11467
+United Kingdom,Prunella modularis,Dunnock,13304
+United Kingdom,Phasianus colchicus,Ring-necked Pheasant,11517
+United Kingdom,Haematopus ostralegus,Eurasian Oystercatcher,11473
 United Kingdom,Egretta garzetta,Little Egret,11298
-United Kingdom,Turdus philomelos,Song Thrush,10677
-United Kingdom,Falco tinnunculus,Eurasian Kestrel,10451
-United Kingdom,Aegithalos caudatus,Long-tailed Tit,10407
-United Kingdom,Alopochen aegyptiaca,Egyptian Goose,10118
-United Kingdom,Saxicola rubicola,European Stonechat,10078
-United Kingdom,Troglodytes troglodytes,Eurasian Wren,9771
+United Kingdom,Turdus philomelos,Song Thrush,10680
+United Kingdom,Falco tinnunculus,Eurasian Kestrel,10453
+United Kingdom,Aegithalos caudatus,Long-tailed Tit,10411
+United Kingdom,Alopochen aegyptiaca,Egyptian Goose,10120
+United Kingdom,Saxicola rubicola,European Stonechat,10083
+United Kingdom,Troglodytes troglodytes,Eurasian Wren,9774
 United Kingdom,Milvus milvus,Red Kite,9166
-United Kingdom,Podiceps cristatus,Great Crested Grebe,8607
-United Kingdom,Vanellus vanellus,Northern Lapwing,8482
+United Kingdom,Podiceps cristatus,Great Crested Grebe,8608
+United Kingdom,Vanellus vanellus,Northern Lapwing,8484
 United Kingdom,Larus fuscus,Lesser Black-backed Gull,8296
 United Kingdom,Phylloscopus collybita,Common Chiffchaff,8087
-United Kingdom,Dendrocopos major,Great Spotted Woodpecker,7927
+United Kingdom,Dendrocopos major,Great Spotted Woodpecker,7930
 United Kingdom,Tringa totanus,Common Redshank,6987
 United Kingdom,Garrulus glandarius,Eurasian Jay,6987
-United Kingdom,Chloris chloris,European Greenfinch,6778
-United Kingdom,Streptopelia decaocto,Eurasian Collared-Dove,6641
+United Kingdom,Chloris chloris,European Greenfinch,6781
+United Kingdom,Streptopelia decaocto,Eurasian Collared-Dove,6642
 United Kingdom,Motacilla cinerea,Grey Wagtail,6617
+United Kingdom,Hirundo rustica,Barn Swallow,6603
 United Kingdom,Anas crecca,Green-winged Teal,6601
-United Kingdom,Hirundo rustica,Barn Swallow,6598
 United Kingdom,Anthus pratensis,Meadow Pipit,6504
-United Kingdom,Numenius arquata,Eurasian Curlew,6327
-United Kingdom,Emberiza schoeniclus,Reed Bunting,6324
-United Kingdom,Corvus frugilegus,Rook,6139
-United Kingdom,Mergus merganser,Common Merganser,6067
-United Kingdom,Linaria cannabina,Eurasian Linnet,5996
-United Kingdom,Psittacula krameri,Rose-ringed Parakeet,5944
+United Kingdom,Numenius arquata,Eurasian Curlew,6331
+United Kingdom,Emberiza schoeniclus,Reed Bunting,6326
+United Kingdom,Corvus frugilegus,Rook,6140
+United Kingdom,Mergus merganser,Common Merganser,6068
+United Kingdom,Linaria cannabina,Eurasian Linnet,5997
+United Kingdom,Psittacula krameri,Rose-ringed Parakeet,5945
 United Kingdom,Sitta europaea,Eurasian Nuthatch,5734
 United Kingdom,Mareca strepera,Gadwall,5692
-United Kingdom,Tadorna tadorna,Common Shelduck,5519
+United Kingdom,Tadorna tadorna,Common Shelduck,5521
 United Kingdom,Spatula clypeata,Northern Shoveler,5312
-United Kingdom,Periparus ater,Coal Tit,5270
-United Kingdom,Sylvia atricapilla,Eurasian Blackcap,5188
-United Kingdom,Tachybaptus ruficollis,Little Grebe,5126
+United Kingdom,Periparus ater,Coal Tit,5272
+United Kingdom,Sylvia atricapilla,Eurasian Blackcap,5190
+United Kingdom,Tachybaptus ruficollis,Little Grebe,5127
 United Kingdom,Mareca penelope,Eurasian Wigeon,5091
 United Kingdom,Accipiter nisus,Eurasian Sparrowhawk,5028
 United Kingdom,Aix galericulata,Mandarin Duck,4920
-United Kingdom,Arenaria interpres,Ruddy Turnstone,4801
+United Kingdom,Arenaria interpres,Ruddy Turnstone,4802
 United Kingdom,Turdus iliacus,Redwing,4716
-United Kingdom,Turdus viscivorus,Mistle Thrush,4700
-United Kingdom,Curruca communis,Common Whitethroat,4620
+United Kingdom,Turdus viscivorus,Mistle Thrush,4702
+United Kingdom,Curruca communis,Common Whitethroat,4621
 United Kingdom,Pyrrhula pyrrhula,Eurasian Bullfinch,4407
 United Kingdom,Oenanthe oenanthe,Northern Wheatear,4407
 United Kingdom,Regulus regulus,Goldcrest,4350
-United Kingdom,Alauda arvensis,Eurasian Skylark,4331
-United Kingdom,Limosa limosa,Black-tailed Godwit,4198
+United Kingdom,Alauda arvensis,Eurasian Skylark,4332
+United Kingdom,Limosa limosa,Black-tailed Godwit,4200
 United Kingdom,Aythya ferina,Common Pochard,4025
 United Kingdom,Alcedo atthis,Common Kingfisher,3893
 United Kingdom,Morus bassanus,Northern Gannet,3688
-United Kingdom,Certhia familiaris,Eurasian Treecreeper,3659
-United Kingdom,Larus marinus,Great Black-backed Gull,3633
-United Kingdom,Larus canus,Common Gull,3539
-United Kingdom,Circus aeruginosus,Western Marsh Harrier,3393
-United Kingdom,Columba oenas,Stock Dove,3347
-United Kingdom,Emberiza citrinella,Yellowhammer,3320
+United Kingdom,Certhia familiaris,Eurasian Treecreeper,3660
+United Kingdom,Larus marinus,Great Black-backed Gull,3634
+United Kingdom,Larus canus,Common Gull,3540
+United Kingdom,Circus aeruginosus,Western Marsh Harrier,3394
+United Kingdom,Columba oenas,Stock Dove,3349
+United Kingdom,Emberiza citrinella,Yellowhammer,3322
 United Kingdom,Spinus spinus,Eurasian Siskin,3305
 United Kingdom,Recurvirostra avosetta,Pied Avocet,3156
-United Kingdom,Fratercula arctica,Atlantic Puffin,3140
-United Kingdom,Gulosus aristotelis,European Shag,3110
+United Kingdom,Fratercula arctica,Atlantic Puffin,3141
+United Kingdom,Gulosus aristotelis,European Shag,3111
 United Kingdom,Uria aalge,Common Murre,3104
-United Kingdom,Anthus petrosus,Rock Pipit,3012
-United Kingdom,Somateria mollissima,Common Eider,2994
-United Kingdom,Picus viridis,Eurasian Green Woodpecker,2979
+United Kingdom,Anthus petrosus,Rock Pipit,3013
+United Kingdom,Somateria mollissima,Common Eider,2995
+United Kingdom,Picus viridis,Eurasian Green Woodpecker,2980
 United Kingdom,Cinclus cinclus,White-throated Dipper,2844
-United Kingdom,Calidris alpina,Dunlin,2762
+United Kingdom,Calidris alpina,Dunlin,2763
 United Kingdom,Ardea alba,Great Egret,2704
-United Kingdom,Phylloscopus trochilus,Willow Warbler,2684
-United Kingdom,Corvus corax,Common Raven,2657
-United Kingdom,Charadrius hiaticula,Common Ringed Plover,2649
+United Kingdom,Phylloscopus trochilus,Willow Warbler,2685
+United Kingdom,Corvus corax,Common Raven,2658
+United Kingdom,Charadrius hiaticula,Common Ringed Plover,2652
 United Kingdom,Fulmarus glacialis,Northern Fulmar,2648
-United Kingdom,Strix aluco,Tawny Owl,2618
-United Kingdom,Sterna hirundo,Common Tern,2516
+United Kingdom,Strix aluco,Tawny Owl,2619
+United Kingdom,Sterna hirundo,Common Tern,2519
 United Kingdom,Alca torda,Razorbill,2451
-United Kingdom,Acrocephalus schoenobaenus,Sedge Warbler,2436
+United Kingdom,Acrocephalus schoenobaenus,Sedge Warbler,2437
 United Kingdom,Falco peregrinus,Peregrine Falcon,2286
-United Kingdom,Delichon urbicum,Western House Martin,2242
+United Kingdom,Delichon urbicum,Western House Martin,2243
 United Kingdom,Turdus pilaris,Fieldfare,2223
 United Kingdom,Bucephala clangula,Common Goldeneye,2181
-United Kingdom,Rissa tridactyla,Black-legged Kittiwake,2162
+United Kingdom,Rissa tridactyla,Black-legged Kittiwake,2163
 United Kingdom,Branta bernicla,Brant,2100
-United Kingdom,Gallinago gallinago,Common Snipe,2067
+United Kingdom,Gallinago gallinago,Common Snipe,2068
 United Kingdom,Apus apus,Common Swift,1975
-United Kingdom,Actitis hypoleucos,Common Sandpiper,1965
-United Kingdom,Alectoris rufa,Red-legged Partridge,1949
-United Kingdom,Tyto alba,Western Barn Owl,1767
-United Kingdom,Anser brachyrhynchus,Pink-footed Goose,1766
-United Kingdom,Calidris alba,Sanderling,1717
-United Kingdom,Acrocephalus scirpaceus,Common Reed Warbler,1708
+United Kingdom,Actitis hypoleucos,Common Sandpiper,1966
+United Kingdom,Alectoris rufa,Red-legged Partridge,1950
+United Kingdom,Anser brachyrhynchus,Pink-footed Goose,1768
+United Kingdom,Tyto alba,Western Barn Owl,1768
+United Kingdom,Calidris alba,Sanderling,1718
+United Kingdom,Acrocephalus scirpaceus,Common Reed Warbler,1710
 United Kingdom,Cygnus atratus,Black Swan,1698
-United Kingdom,Anas acuta,Northern Pintail,1679
-United Kingdom,Riparia riparia,Bank Swallow,1679
-United Kingdom,Branta leucopsis,Barnacle Goose,1660
+United Kingdom,Anas acuta,Northern Pintail,1680
+United Kingdom,Riparia riparia,Bank Swallow,1680
+United Kingdom,Branta leucopsis,Barnacle Goose,1662
 United Kingdom,Cygnus cygnus,Whooper Swan,1563
 United Kingdom,Passer montanus,Eurasian Tree Sparrow,1489
+United Kingdom,Muscicapa striata,Spotted Flycatcher,1446
 United Kingdom,Calidris pugnax,Ruff,1446
-United Kingdom,Muscicapa striata,Spotted Flycatcher,1445
 United Kingdom,Corvus cornix,Hooded Crow,1378
-United Kingdom,Cuculus canorus,Common Cuckoo,1349
-United Kingdom,Platalea leucorodia,Eurasian Spoonbill,1342
-United Kingdom,Ichthyaetus melanocephalus,Mediterranean Gull,1324
+United Kingdom,Cuculus canorus,Common Cuckoo,1351
+United Kingdom,Platalea leucorodia,Eurasian Spoonbill,1343
+United Kingdom,Ichthyaetus melanocephalus,Mediterranean Gull,1325
 United Kingdom,Acanthis flammea,Redpoll,1304
-United Kingdom,Thalasseus sandvicensis,Sandwich Tern,1279
-United Kingdom,Pluvialis apricaria,European Golden-Plover,1206
+United Kingdom,Thalasseus sandvicensis,Sandwich Tern,1281
+United Kingdom,Pluvialis apricaria,European Golden-Plover,1207
 United Kingdom,Tringa nebularia,Common Greenshank,1201
 United Kingdom,Netta rufina,Red-crested Pochard,1072
-United Kingdom,Cepphus grylle,Black Guillemot,1038
+United Kingdom,Cepphus grylle,Black Guillemot,1039
 United Kingdom,Cairina moschata,Muscovy Duck,1026
 United Kingdom,Tringa ochropus,Green Sandpiper,1014
 United Kingdom,Mergus serrator,Red-breasted Merganser,1007
-United Kingdom,Ardea ibis,Western Cattle-Egret,1001
-United Kingdom,Limosa lapponica,Bar-tailed Godwit,986
+United Kingdom,Ardea ibis,Western Cattle-Egret,1002
+United Kingdom,Limosa lapponica,Bar-tailed Godwit,988
 United Kingdom,Pyrrhocorax pyrrhocorax,Red-billed Chough,986
 United Kingdom,Anser anser × Branta canadensis,Greylag × Canada Goose,985
-United Kingdom,Thinornis dubius,Little Ringed Plover,979
+United Kingdom,Thinornis dubius,Little Ringed Plover,980
 United Kingdom,Pandion haliaetus,Osprey,971
-United Kingdom,Athene noctua,Little Owl,936
-United Kingdom,Emberiza calandra,Corn Bunting,936
-United Kingdom,Lagopus scotica,Red Grouse,919
+United Kingdom,Athene noctua,Little Owl,937
+United Kingdom,Emberiza calandra,Corn Bunting,937
+United Kingdom,Lagopus scotica,Red Grouse,920
 United Kingdom,Phoenicurus phoenicurus,Common Redstart,915
 United Kingdom,Numenius phaeopus,Eurasian Whimbrel,900
 United Kingdom,Poecile palustris,Marsh Tit,899
 United Kingdom,Motacilla flava,Western Yellow Wagtail,859
 United Kingdom,Rallus aquaticus,Water Rail,827
-United Kingdom,Pluvialis squatarola,Black-bellied Plover,819
+United Kingdom,Pluvialis squatarola,Black-bellied Plover,820
 United Kingdom,Falco subbuteo,Eurasian Hobby,807
-United Kingdom,Cettia cetti,Cetti's Warbler,779
-United Kingdom,Haliaeetus albicilla,White-tailed Eagle,739
-United Kingdom,Gavia immer,Common Loon,725
+United Kingdom,Cettia cetti,Cetti's Warbler,781
+United Kingdom,Haliaeetus albicilla,White-tailed Eagle,741
+United Kingdom,Gavia immer,Common Loon,726
 United Kingdom,Calidris canutus,Red Knot,722
-United Kingdom,Asio flammeus,Short-eared Owl,721
-United Kingdom,Sterna paradisaea,Arctic Tern,691
+United Kingdom,Asio flammeus,Short-eared Owl,722
+United Kingdom,Sterna paradisaea,Arctic Tern,693
 United Kingdom,Saxicola rubetra,Whinchat,686
 United Kingdom,Regulus ignicapilla,Common Firecrest,638
 United Kingdom,Sylvia borin,Garden Warbler,617
-United Kingdom,Calidris maritima,Purple Sandpiper,615
-United Kingdom,Gavia stellata,Red-throated Loon,609
+United Kingdom,Calidris maritima,Purple Sandpiper,616
+United Kingdom,Gavia stellata,Red-throated Loon,610
 United Kingdom,Plectrophenax nivalis,Snow Bunting,607
 United Kingdom,Grus grus,Common Crane,601
 United Kingdom,Ficedula hypoleuca,European Pied Flycatcher,591
 United Kingdom,Botaurus stellaris,Eurasian Bittern,567
 United Kingdom,Fringilla montifringilla,Brambling,566
 United Kingdom,Perdix perdix,Gray Partridge,560
-United Kingdom,Tringa erythropus,Spotted Redshank,554
+United Kingdom,Tringa erythropus,Spotted Redshank,555
 United Kingdom,Bombycilla garrulus,Bohemian Waxwing,525
 United Kingdom,Stercorarius skua,Great Skua,519
-United Kingdom,Anser albifrons,Greater White-fronted Goose,512
+United Kingdom,Anser albifrons,Greater White-fronted Goose,513
 United Kingdom,Pavo cristatus,Indian Peafowl,501
 United Kingdom,Loxia curvirostra,Red Crossbill,475
-United Kingdom,Curruca curruca,Lesser Whitethroat,473
+United Kingdom,Curruca curruca,Lesser Whitethroat,474
 United Kingdom,Curruca undata,Dartford Warbler,469
 United Kingdom,Panurus biarmicus,Bearded Reedling,467
 United Kingdom,Spatula querquedula,Garganey,458
-United Kingdom,Anthus trivialis,Tree Pipit,456
-United Kingdom,Ciconia ciconia,White Stork,444
+United Kingdom,Anthus trivialis,Tree Pipit,457
+United Kingdom,Ciconia ciconia,White Stork,445
 United Kingdom,Scolopax rusticola,Eurasian Woodcock,443
-United Kingdom,Phoenicurus ochruros,Black Redstart,438
-United Kingdom,Turdus torquatus,Ring Ouzel,419
+United Kingdom,Phoenicurus ochruros,Black Redstart,439
+United Kingdom,Turdus torquatus,Ring Ouzel,420
 United Kingdom,Plegadis falcinellus,Glossy Ibis,404
-United Kingdom,Podiceps nigricollis,Eared Grebe,398
+United Kingdom,Podiceps nigricollis,Eared Grebe,399
 United Kingdom,Locustella naevia,Common Grasshopper Warbler,388
 United Kingdom,Melanitta nigra,Common Scoter,384
-United Kingdom,Circus cyaneus,Hen Harrier,373
+United Kingdom,Circus cyaneus,Hen Harrier,374
 United Kingdom,Cygnus columbianus,Tundra Swan,364
 United Kingdom,Clangula hyemalis,Long-tailed Duck,354
 United Kingdom,Puffinus puffinus,Manx Shearwater,350
@@ -1157,29 +1157,29 @@ United Kingdom,Hydrocoloeus minutus,Little Gull,323
 United Kingdom,Sternula albifrons,Little Tern,313
 United Kingdom,Luscinia megarhynchos,Common Nightingale,305
 United Kingdom,Poecile montanus,Willow Tit,304
-United Kingdom,Linaria flavirostris,Twite,302
-United Kingdom,Stercorarius parasiticus,Parasitic Jaeger,291
+United Kingdom,Linaria flavirostris,Twite,303
+United Kingdom,Stercorarius parasiticus,Parasitic Jaeger,292
 United Kingdom,Lymnocryptes minimus,Jack Snipe,287
-United Kingdom,Mergellus albellus,Smew,285
+United Kingdom,Mergellus albellus,Smew,286
 United Kingdom,Tringa glareola,Wood Sandpiper,284
 United Kingdom,Calidris ferruginea,Curlew Sandpiper,265
-United Kingdom,Coccothraustes coccothraustes,Hawfinch,246
+United Kingdom,Coccothraustes coccothraustes,Hawfinch,247
 United Kingdom,Calidris minuta,Little Stint,244
 United Kingdom,Emberiza cirlus,Cirl Bunting,240
 United Kingdom,Lullula arborea,Woodlark,234
 United Kingdom,Larus michahellis,Yellow-legged Gull,233
 United Kingdom,Numida meleagris,Helmeted Guineafowl,232
 United Kingdom,Podiceps auritus,Horned Grebe,223
-United Kingdom,Falco columbarius,Merlin,222
+United Kingdom,Falco columbarius,Merlin,223
 United Kingdom,Lyrurus tetrix,Black Grouse,220
 United Kingdom,Caprimulgus europaeus,Eurasian Nightjar,219
 United Kingdom,Aythya collaris,Ring-necked Duck,217
 United Kingdom,Asio otus,Long-eared Owl,205
 United Kingdom,Anser caerulescens,Snow Goose,203
+United Kingdom,Lagopus muta,Rock Ptarmigan,197
 United Kingdom,Tadorna ferruginea,Ruddy Shelduck,197
-United Kingdom,Lagopus muta,Rock Ptarmigan,196
 United Kingdom,Streptopelia turtur,European Turtle-Dove,185
-United Kingdom,Gavia arctica,Arctic Loon,181
+United Kingdom,Gavia arctica,Arctic Loon,182
 United Kingdom,Aquila chrysaetos,Golden Eagle,169
 United Kingdom,Anser serrirostris,Tundra Bean Goose,165
 United Kingdom,Himantopus himantopus,Black-winged Stilt,157
@@ -1197,8 +1197,8 @@ United Kingdom,Otis tarda,Great Bustard,124
 United Kingdom,Podiceps grisegena,Red-necked Grebe,118
 United Kingdom,Larus cachinnans,Caspian Gull,118
 United Kingdom,Phylloscopus inornatus,Yellow-browed Warbler,118
+United Kingdom,Larus glaucoides,Iceland Gull,116
 United Kingdom,Anthus spinoletta,Water Pipit,116
-United Kingdom,Larus glaucoides,Iceland Gull,115
 United Kingdom,Eudromias morinellus,Eurasian Dotterel,111
 United Kingdom,Aix sponsa,Wood Duck,111
 United Kingdom,Melanitta fusca,Velvet Scoter,111
@@ -1206,12 +1206,12 @@ United Kingdom,Jynx torquilla,Eurasian Wryneck,109
 United Kingdom,Lanius excubitor,Great Grey Shrike,109
 United Kingdom,Lophophanes cristatus,Crested Tit,103
 United Kingdom,Calidris melanotos,Pectoral Sandpiper,101
-United Kingdom,Eremophila alpestris,Horned Lark,100
+United Kingdom,Eremophila alpestris,Horned Lark,101
 United Kingdom,Tringa flavipes,Lesser Yellowlegs,94
 United Kingdom,Phalaropus lobatus,Red-necked Phalarope,84
 United Kingdom,Anser rossii,Ross's Goose,82
 United Kingdom,Aythya affinis,Lesser Scaup,81
-United Kingdom,Sterna dougallii,Roseate Tern,79
+United Kingdom,Sterna dougallii,Roseate Tern,80
 United Kingdom,Aythya nyroca,Ferruginous Duck,79
 United Kingdom,Dryobates minor,Lesser Spotted Woodpecker,78
 United Kingdom,Limnodromus scolopaceus,Long-billed Dowitcher,75
@@ -1245,9 +1245,9 @@ United Kingdom,Hydrobates pelagicus,European Storm-Petrel,35
 United Kingdom,Remiz pendulinus,Eurasian Penduline-Tit,35
 United Kingdom,Xema sabini,Sabine's Gull,34
 United Kingdom,Anser caerulescens × indicus,Snow × Bar-headed Goose,34
+United Kingdom,Tringa stagnatilis,Marsh Sandpiper,32
 United Kingdom,Actitis macularius,Spotted Sandpiper,32
 United Kingdom,Hydroprogne caspia,Caspian Tern,32
-United Kingdom,Tringa stagnatilis,Marsh Sandpiper,31
 United Kingdom,Chlidonias leucopterus,White-winged Tern,31
 United Kingdom,Gavia adamsii,Yellow-billed Loon,31
 United Kingdom,Tarsiger cyanurus,Red-flanked Bluetail,31

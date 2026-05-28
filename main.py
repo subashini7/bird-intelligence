@@ -4,18 +4,23 @@ import re
 from datetime import date, datetime
 
 import cv2
+import matplotlib.pyplot as plt
+import numpy as np
 import osxphotos
 import pandas as pd
 import photoscript
 import plotly.express as px
 import pyiqa
 import reverse_geocoder as rg
+import seaborn as sns
 import torch
 import torch.nn as nn
 from Binocular.models.inference import InferenceModel
 from dotenv import load_dotenv
 from huggingface_hub import hf_hub_download
 from PIL import Image
+from sklearn.metrics import confusion_matrix, precision_recall_curve, average_precision_score
+from sklearn.preprocessing import label_binarize
 from torchvision import transforms
 from transformers import pipeline
 
@@ -26,7 +31,7 @@ device = "mps" if torch.backends.mps.is_available() else "cpu"
 OUTPUT_FILE = "classified_birds_report.csv"
 ALBUM_NAME = "Birds"
 DATE_CUTOFF = date(2024, 6, 18)
-TARGET_REGION = "Singapore"
+TARGET_REGION = "India"  # Change to "US", "India", "UK", or "Singapore" as needed
 REGION_CONFIG = {
     "US": {
         "country_codes": {"US"},
@@ -51,7 +56,17 @@ REGION_CONFIG = {
         "country_codes": {"IN"},
         "classifier": {
             "repo_id": "pshops/dinov2-india-birds",
-            "filename": "probe_best.pth",
+            "filename": "fine_tune_best.pth",
+            "is_standalone": True,
+        },
+        "use_scientific_to_common": True,
+        "mapping_csv": "regional_birds.csv",
+    },
+    "UK": {
+        "country_codes": {"GB"},
+        "classifier": {
+            "repo_id": "pshops/dinov2-uk-birds",
+            "filename": "fine_tune_best.pth",
             "is_standalone": True,
         },
         "use_scientific_to_common": True,
@@ -277,6 +292,7 @@ def detect_classify(photo, is_in_target_region, detector, classifier, iqa_metric
     top_label = ""
     top_confidence = 0
     refined_label = ""
+    current_label = photo.keywords[0].replace(BIRD_TAG_PREFIX, "") if photo.keywords else ""
 
     try:
         if (
@@ -285,15 +301,15 @@ def detect_classify(photo, is_in_target_region, detector, classifier, iqa_metric
             or not is_in_target_region
         ):
             return None
-
-        if isinstance(photo.path, Image.Image):
-            image = photo.path
+        photo_path = photo.path_edited if photo.path_edited else photo.path
+        if isinstance(photo_path, Image.Image):
+            image = photo_path
         else:
-            image = Image.open(str(photo.path))
+            image = Image.open(str(photo_path))
         image = image.convert("RGB")
         image.load()  # Force load to catch "premature end of data"
 
-        results = detector(str(photo.path))
+        results = detector(str(photo_path))
         birds = [
             res for res in results if res["label"] == "bird" and res["score"] > 0.7
         ]
@@ -301,7 +317,7 @@ def detect_classify(photo, is_in_target_region, detector, classifier, iqa_metric
 
         if birds:
             detect_high_conf = birds[0]["score"]
-            img_cv = cv2.imread(photo.path)
+            img_cv = cv2.imread(photo_path)
             if img_cv is None:
                 raise ValueError("OpenCV failed to read image")
 
@@ -339,6 +355,14 @@ def detect_classify(photo, is_in_target_region, detector, classifier, iqa_metric
                             "use_scientific_to_common", False
                         )
                         and top_confidence > 0.40
+                        and top_label not in {
+                            "Tawny Eagle",
+                            "Vernal Hanging-Parrot",
+                            "Marsh Sandpiper",
+                        }
+                        # "Great White Pelican" is "Indian Spot-billed Pelican" as missing in reference
+                        # 8752 - Whimbrel
+                        # Great Egret is once classified as Eastern Cattle-Egret
                     ):
                         refined_label = top_label
                     else:
@@ -380,6 +404,7 @@ def detect_classify(photo, is_in_target_region, detector, classifier, iqa_metric
             "detect_high_conf": detect_high_conf,
             "avg_quality": round(avg_quality, 3),
             "refined_label": refined_label,
+            "current_label": current_label,
             "top_label": top_label,
             "top_confidence": round(top_confidence, 3),
             "top_5_predictions": top_5_summary,
@@ -408,6 +433,7 @@ def process_birds_album(detector, classifier, iqa_metric, csv_filename):
         "detect_high_conf",
         "avg_q_score",
         "refined_label",
+        "current_label",
         "top_label",
         "top_confidence",
         "top_5_predictions",
@@ -440,6 +466,7 @@ def process_birds_album(detector, classifier, iqa_metric, csv_filename):
                         data["detect_high_conf"],
                         data["avg_quality"],
                         data["refined_label"],
+                        data["current_label"],
                         data["top_label"],
                         data["top_confidence"],
                         data["top_5_predictions"],
@@ -483,6 +510,139 @@ def visualize_species_plotly(csv_filename):
     print(f"Interactive visualization saved as {output_html}")
     fig.show()
 
+
+
+def analyze_bird_data(csv_path, output_cm='confusion_matrix.png', output_pr='labeled_precision_recall_curve.png'):
+    # Load the CSV file
+    df = pd.read_csv(csv_path)
+    
+    # -------------------------------------------------------------
+    # 1. Number of images with No GPS data and number of birds = 1
+    # -------------------------------------------------------------
+    # Assumes 'location' is empty/NaN or a string indicating no data
+    no_gps_mask = df['location'].isna() | (df['location'].astype(str).str.strip() == 'No GPS Data')
+    birds_one_mask = df['bird_count'] == 1
+    no_gps_single_bird = df[no_gps_mask & birds_one_mask].shape[0]
+    
+    print(f"1. Number of images with No GPS data and 1 bird: {no_gps_single_bird}")
+    
+    # -------------------------------------------------------------
+    # 2. Number of images with no current_label
+    # -------------------------------------------------------------
+    no_current_label = df['current_label'].isna().sum()
+    print(f"2. Number of images with no current_label: {no_current_label}")
+    
+    # -------------------------------------------------------------
+    # 3. Clean 'Manual:' prefix and compute Confusion Matrix
+    # -------------------------------------------------------------
+    # Filter out records missing vital evaluation labels
+    eval_df = df.dropna(subset=['current_label', 'top_label']).copy()
+    
+    # Clean the string prefixes
+    eval_df['current_label'] = (
+        eval_df['current_label']
+        .astype(str)
+        .str.replace(r'^Manual:\s*', '', regex=True)
+        .str.strip()
+    )
+    eval_df['top_label'] = eval_df['top_label'].astype(str).str.strip()
+    
+    # Get a combined sorted list of unique species labels
+    unique_labels = sorted(list(set(eval_df['current_label']).union(set(eval_df['top_label']))))
+    
+    # Compute the matrix
+    cm = confusion_matrix(eval_df['current_label'], eval_df['top_label'], labels=unique_labels)
+    
+    # Plot the matrix
+    plt.figure(figsize=(12, 10))
+    sns.heatmap(cm, annot=True, fmt='d', xticklabels=unique_labels, yticklabels=unique_labels, cmap='Blues')
+    plt.title('Bird Species Confusion Matrix (Cleaned Ground Truth vs Top Label)')
+    plt.ylabel('Ground Truth (current_label)')
+    plt.xlabel('Predicted (top_label)')
+    plt.tight_layout()
+    plt.savefig(output_cm, dpi=300, bbox_inches='tight')
+    plt.show()
+    
+    y_true_strings = eval_df['current_label'].values
+    y_pred_strings = eval_df['top_label'].values
+
+    # Get the exact list of classes used in your confusion matrix
+    classes = unique_labels  
+
+    # 2. Map your single 'top_confidence' float column into a full (N_samples, N_classes) probability grid
+    # This assigns the confidence score to the predicted class column, and 0 to all other columns
+    y_scores_multiclass = np.zeros((len(eval_df), len(classes)))
+    for i, (pred_label, conf) in enumerate(zip(y_pred_strings, eval_df['top_confidence'])):
+        if pred_label in classes:
+            class_idx = classes.index(pred_label)
+            y_scores_multiclass[i, class_idx] = float(conf)
+
+    # 3. Binarize the ground-truth labels into a matching (N_samples, N_classes) matrix
+    y_true_multiclass = label_binarize(y_true_strings, classes=classes)
+
+    # Handle edge case if your subset only contains 2 classes
+    if y_true_multiclass.shape[1] == 1:
+        y_true_multiclass = np.hstack((1 - y_true_multiclass, y_true_multiclass))
+
+    # 4. Calculate the Micro-Averaged Precision-Recall Curve across all classes
+    precision_micro, recall_micro, thresholds_micro = precision_recall_curve(
+        y_true_multiclass.ravel(), 
+        y_scores_multiclass.ravel()
+    )
+
+    # 5. Plot the corrected curve
+    plt.figure(figsize=(10, 7))
+
+    # 1. Plot the main blue line
+    plt.plot(recall_micro, precision_micro, color='blue', lw=2, label='Micro-averaged PR Curve', zorder=1)
+
+    # 2. Plot the color-coded dots
+    sc = plt.scatter(recall_micro[:-1], precision_micro[:-1], c=thresholds_micro, 
+                    cmap='viridis', s=35, zorder=2)
+    cbar = plt.colorbar(sc)
+    cbar.set_label('Confidence Score')
+
+    # 3. Add explicit text numbers along the curve
+    # We define target confidence levels we want to see written on the plot
+    target_labels = [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85]
+    last_labeled_idx = -100  # Avoids crowding numbers together if points are too close
+
+    for target in target_labels:
+        # Find the index where the threshold is closest to our target step
+        idx = np.argmin(np.abs(thresholds_micro - target))
+        
+        # Only label if it's a reasonable distance from the last labeled dot
+        if abs(idx - last_labeled_idx) > 3 and idx < len(thresholds_micro):
+            # Extract the coordinates for the text
+            x = recall_micro[idx]
+            y = precision_micro[idx]
+            val = thresholds_micro[idx]
+            
+            # Draw the text label next to the dot
+            plt.annotate(
+                f"{val:.2f}", 
+                xy=(x, y), 
+                xytext=(7, 7),  # Offset text 7 points right and 7 points up from the dot
+                textcoords='offset points', 
+                fontsize=9, 
+                fontweight='bold',
+                color='black',
+                bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="gray", alpha=0.8) # Clean badge background
+            )
+            last_labeled_idx = idx
+
+    # 4. Standard chart formatting
+    plt.xlabel('Recall (Fraction of Birds Caught)')
+    plt.ylabel('Precision (Accuracy / Freedom from False Positives)')
+    plt.title('Multi-Class Precision-Recall Curve (With Direct Value Badges)')
+    plt.grid(True, linestyle='--', alpha=0.4)
+    plt.xlim([-0.05, 1.05])
+    plt.ylim([-0.05, 1.05])
+
+    plt.tight_layout()
+    plt.savefig(output_pr, dpi=300)
+    plt.show()
+    
 
 def reconvert_to_predictions(summary_string):
     """Parse a top-5 summary string back into a list of (label, score) tuples."""
@@ -610,7 +770,7 @@ if __name__ == "__main__":
     base_name = os.path.splitext(os.path.basename(OUTPUT_FILE))[0]
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_csv_filename = f"{base_name}_{timestamp}.csv"
-
     process_birds_album(detector, classifier, iqa_metric, output_csv_filename)
     visualize_species_plotly(output_csv_filename)
-    sync_keywords_from_csv(output_csv_filename)
+    analyze_bird_data(output_csv_filename, output_cm=f"confusion_matrix_{timestamp}.png", output_pr=f"precision_recall_curve_{timestamp}.png")
+    #sync_keywords_from_csv(output_csv_filename)

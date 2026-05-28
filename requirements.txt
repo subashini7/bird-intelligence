@@ -5,9 +5,11 @@ osxphotos
 pandas
 pillow
 photoscript
+plotly
 pyiqa
 python-dotenv
 reverse_geocoder
+scikit-learn
 timm
 torch
 torchvision

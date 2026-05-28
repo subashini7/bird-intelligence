@@ -98,22 +98,22 @@ After collecting non-US bird images, use `dinov2_probe_fine_tune.py` to:
 - linear probe the DINOv2 model
 - fine-tune DINOv2 on your region-specific bird data
 
-This makes the model more adapted to your local species and image distribution.
+This makes the model more adapted to your local species and image distribution. Upload the model into Hugging Face.
 
 Example:
 ```bash
 python dinov2_probe_fine_tune.py --epochs 30 --lr 2e-4 --freeze_encoder --experiment_name probe
-!python dinov2_probe_fine_tune.py --epochs 30 --lr 1e-5 --resume /kaggle/working/checkpoints/probe_best.pth --experiment_name finetune
+python dinov2_probe_fine_tune.py --epochs 30 --lr 1e-5 --resume <path to probe_best.pth> --experiment_name finetune
 ```
 
 ## 🔧 About `main.py`
-`main.py` now supports region-specific classifiers and scientific-to-common name conversion. The script can be configured to use different bird classifiers for different regions (e.g., US or Singapore).
+`main.py` now supports region-specific classifiers and scientific-to-common name conversion. The script can be configured to use different bird classifiers for different regions (e.g., US or Singapore or India or UK).
 
 ### Configuration
 Edit the `TARGET_REGION` and `REGION_CONFIG` at the top of `main.py`:
 
 ```python
-TARGET_REGION = "Singapore"  # Set to "US" or "Singapore"
+TARGET_REGION = "Singapore"  # Set to "US" or "Singapore" or "UK" or "India"
 
 REGION_CONFIG = {
     "US": {
@@ -139,10 +139,10 @@ REGION_CONFIG = {
 
 ### Region-Specific Features
 - **US Region:** Uses the default Binocular classifier with geographic overrides.
-- **Singapore Region:** 
-  - Loads a fine-tuned local model (`singapore_probe_best.pth`) to work with Singapore birds.
+- **Other Regions:** 
+  - Loads a fine-tuned model from hugging face to work with that regions birds.
   - Converts scientific species names to common names using `regional_birds.csv`.
-  - Uses a simplified refined label rule: if top-1 confidence > 65%, apply that label.
+  - Uses a simplified refined label rule: if top-1 confidence > X%, apply that label.
 
 ## ⚖️ License
 This project is licensed under the MIT License. Models used: [Facebook DETR](https://huggingface.co) and [Binocular Bird Classifier](https://huggingface.co).
