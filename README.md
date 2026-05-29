@@ -209,20 +209,23 @@ The curve shows model performance across the 0.99–1.00 confidence band used by
 At the operating threshold (conf ≥ 0.99): **P=0.95, R=0.89** across 176 species.
 
 ### Confusion Matrix
-The interactive confusion matrix (species ordered by taxonomic sequence) can be viewed here:
-👉 [Open Interactive Confusion Matrix](assets/US_confusion_matrix_20260529_104121.png)
+The confusion matrix (species ordered by taxonomic sequence)
+![Confusion Matrix](assets/US_confusion_matrix_20260529_104121.png)
+The model recognizes juvenile Black-crowned Night Heron as Green Heron; rare Eurasian Wigeon as American Wigeon; 
+Humming birds, Gulls, Grebes and Woodpeckers seperation has to be improved further with training. 
 
 ## 📈 Model Performance (India Region)
 
 ### Precision-Recall Curve
 ![Precision-Recall Curve](assets/India_precision_recall_curve_20260529_091804.png)
 
-The curve shows model performance across the 0.99–1.00 confidence band used by the US pipeline.
-At the operating threshold (conf ≥ 0.99): **P=0.95, R=0.89** across 176 species.
+The curve shows model performance across the confidence band used by the India region pipeline.
+At the operating threshold (conf ≥ 0.31): **P=0.96, R=0.9** across 82 species.
 
 ### Confusion Matrix
-The interactive confusion matrix (species ordered by taxonomic sequence) can be viewed here:
-👉 [Open Interactive Confusion Matrix](assets/India_confusion_matrix_20260529_091804.png)
+The confusion matrix (species ordered by taxonomic sequence)
+![Confusion Matrix](assets/India_confusion_matrix_20260529_091804.png)
+Egrets, Cormorants, Gulls & Terns and Black birds are the ones that the model need to trained on to improve the performance further.
 
 ## ⚖️ License
 This project is licensed under the MIT License. Models used: [Facebook DETR](https://huggingface.co/facebook/detr-resnet-50) and [Binocular Bird Classifier](https://huggingface.co/jiujiuche/binocular).
