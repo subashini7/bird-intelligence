@@ -3,12 +3,8 @@
 
 # --- Local Data & Logs ---
 *.log
-*.png
 processed_*.zip
 processed_*/
-*classified*.html
-*classified_*.csv
-*confusion_matrix*.html
 
 # --- Python Environment ---
 __pycache__/

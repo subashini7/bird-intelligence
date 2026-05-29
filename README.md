@@ -200,5 +200,20 @@ python dinov2_probe_fine_tune.py --epochs 30 --lr 2e-4 --freeze_encoder --experi
 python dinov2_probe_fine_tune.py --epochs 30 --lr 1e-5 --resume <path_to_probe_best.pth> --experiment_name finetune
 ```
 
+## 📈 Model Performance (US Region)
+
+### Precision-Recall Curve
+![Precision-Recall Curve](assets/US_precision_recall_curve_20260529_104121.png)
+
+The curve shows model performance across the 0.99–1.00 confidence band used by the US pipeline.
+At the operating threshold (conf ≥ 0.99): **P=0.95, R=0.89** across 176 species.
+
+### Confusion Matrix
+The interactive confusion matrix (species ordered by taxonomic sequence) can be viewed here:
+👉 [Open Interactive Confusion Matrix](assets/US_confusion_matrix_20260529_104121.html)
+
+> **Note:** The HTML confusion matrix must be viewed locally or via GitHub Pages — 
+> GitHub's README renderer does not display raw HTML files inline.
+
 ## ⚖️ License
 This project is licensed under the MIT License. Models used: [Facebook DETR](https://huggingface.co/facebook/detr-resnet-50) and [Binocular Bird Classifier](https://huggingface.co/jiujiuche/binocular).
