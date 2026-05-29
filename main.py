@@ -27,11 +27,12 @@ from transformers import pipeline
 load_dotenv()
 HF_API = os.getenv("HF_TOKEN")
 BIRD_TAG_PREFIX = "Bird: "
+MANUAL_PREFIX = "Manual: "
 device = "mps" if torch.backends.mps.is_available() else "cpu"
 OUTPUT_FILE = "classified_birds_report.csv"
 ALBUM_NAME = "Birds"
-DATE_CUTOFF = date(2024, 6, 18)
-TARGET_REGION = "UK"  # Change to "US", "India", "UK", or "Singapore" as needed
+DATE_CUTOFF = date(2023, 6, 18)
+TARGET_REGION = "US"  # Change to "US", "India", "UK", or "Singapore" as needed
 REGION_CONFIG = {
     "US": {
         "country_codes": {"US"},
@@ -41,6 +42,8 @@ REGION_CONFIG = {
             "is_standalone": False,
         },
         "use_scientific_to_common": False,
+        "confidence_threshold_for_plot": 0.90,
+        "pr_thresholds": [0.990, 0.995, 1.000],
     },
     "Singapore": {
         "country_codes": {"SG"},
@@ -50,6 +53,8 @@ REGION_CONFIG = {
             "is_standalone": True,
         },
         "use_scientific_to_common": True,
+        "confidence_threshold_for_plot": 0.10,
+        "pr_thresholds": [0.40, 0.55, 0.70],
         "mapping_csv": "regional_birds.csv",
     },
     "India": {
@@ -60,6 +65,8 @@ REGION_CONFIG = {
             "is_standalone": True,
         },
         "use_scientific_to_common": True,
+        "confidence_threshold_for_plot": 0.21,
+        "pr_thresholds": [0.31, 0.50, 0.70],
         "mapping_csv": "regional_birds.csv",
     },
     "UK": {
@@ -70,6 +77,8 @@ REGION_CONFIG = {
             "is_standalone": True,
         },
         "use_scientific_to_common": True,
+        "confidence_threshold_for_plot": 0.21,
+        "pr_thresholds": [0.30, 0.50, 0.70],
         "mapping_csv": "regional_birds.csv",
     },
 }
@@ -176,7 +185,8 @@ def sync_keywords_from_csv(csv_filename: str):
     for photo in target_album.photos():
         fname = photo.filename
         current_keywords = photo.keywords
-        cleaned_keywords = [k for k in current_keywords if not is_bird_tag(k)]
+        manual_tag = next((k for k in current_keywords if k.startswith(MANUAL_PREFIX)), None)
+        cleaned_keywords = [k for k in current_keywords if not is_bird_tag(k) and not k.startswith(MANUAL_PREFIX)]
 
         if fname not in label_map:
             not_found += 1
@@ -184,12 +194,33 @@ def sync_keywords_from_csv(csv_filename: str):
 
         new_label = label_map[fname]
 
-        if new_label:
-            photo.keywords = cleaned_keywords + [make_tag(new_label)]
-            updated += 1
+        if manual_tag:
+            manual_label = manual_tag.removeprefix(MANUAL_PREFIX).strip()
+            if manual_label != new_label:
+                # Manual label disagrees — leave everything untouched
+                continue
+            # Manual label matches — replace "Manual: X" with the clean bird tag
+            if new_label:
+                print(f"  {fname}: Manual tag to Bird '{manual_label}' → '{new_label}'")
+                photo.keywords = cleaned_keywords + [make_tag(new_label)]
+                updated += 1
+            else:
+                photo.keywords = cleaned_keywords
+                cleared += 1
         else:
-            photo.keywords = cleaned_keywords
-            cleared += 1
+            # No manual tag — look for an existing Bird: tag and report changes
+            existing_bird_tag = next((k for k in current_keywords if is_bird_tag(k)), None)
+            existing_label = existing_bird_tag.removeprefix("Bird: ").strip() if existing_bird_tag else None
+
+            if new_label and existing_label != new_label:
+                print(f"  {fname}: '{existing_label}' → '{new_label}'")
+
+            if new_label:
+                photo.keywords = cleaned_keywords + [make_tag(new_label)]
+                updated += 1
+            else:
+                photo.keywords = cleaned_keywords
+                cleared += 1
 
     print(f"Done. Updated: {updated} | Cleared: {cleared} | Not in CSV: {not_found}")
 
@@ -255,6 +286,7 @@ def get_refined_us_label(predictions, lat, lon, date):
         "Surfbird": "Dunlin",
         "Downy Woodpecker": "Hairy Woodpecker",
         "Wilson's Phalarope": "Red-necked Phalarope",
+        "Whimbrel": "Hudsonian Whimbrel",
     }
     if base_refined_label in corrections:
         refined_label = corrections[base_refined_label]
@@ -323,22 +355,19 @@ def detect_classify(photo, is_in_region, detector, classifier, iqa_metric):
 
             for b in birds:
                 box = b["box"]
-                x1, y1, x2, y2 = (
-                    int(box["xmin"]),
-                    int(box["ymin"]),
-                    int(box["xmax"]),
-                    int(box["ymax"]),
-                )
-                if (y2 - y1) > 10 and (x2 - x1) > 10:
-                    crop_cv = img_cv[y1:y2, x1:x2]
-                    scores.append(get_bird_quality_score(crop_cv, iqa_metric))
+                h, w = img_cv.shape[:2]
+                x1 = max(0, int(box["xmin"]))
+                y1 = max(0, int(box["ymin"]))
+                x2 = min(w, int(box["xmax"]))
+                y2 = min(h, int(box["ymax"]))
+               
+                if (y2 - y1) <= 10 or (x2 - x1) <= 10:
+                    continue
+                
+                crop_cv = img_cv[y1:y2, x1:x2]
+                scores.append(get_bird_quality_score(crop_cv, iqa_metric))
 
-                if (
-                    (len(birds) == 1)
-                    and is_in_region
-                    and (y2 - y1) > 0
-                    and (x2 - x1) > 0
-                ):
+                if len(birds) == 1 and is_in_region:
                     crop_pil = Image.fromarray(cv2.cvtColor(crop_cv, cv2.COLOR_BGR2RGB))
                     predictions = classifier.predict(crop_pil, top_k=5)
                     if REGION_CONFIG.get(TARGET_REGION, {}).get(
@@ -351,7 +380,7 @@ def detect_classify(photo, is_in_region, detector, classifier, iqa_metric):
                         if top_confidence > 0.40:
                             refined_label = top_label
                     elif TARGET_REGION == "UK":
-                        if top_confidence > 0.30:
+                        if top_confidence > 0.31:
                             refined_label = top_label
                         corrections = {
                             "Whooper Swan": "Mute Swan",
@@ -531,20 +560,34 @@ def assign_bird_group(species_name):
 
     if "egret" in name or "heron" in name:
         return "1_Waders_Egrets_Herons"
-    elif "cormorant" in name or "shag" in name:
-        return "2_Cormorants"
+    elif "pelican" in name:
+        return "2_Pelicans"
+    elif "cormorant" in name or "shag" in name or "grebe" in name or "martin" in name or "phalarope" in name or "loon" in name or "murre" in name:
+        return "31_WaterDivers"
     elif "gull" in name or "kittiwake" in name:
-        return "3_Gulls"
+        return "32_Gulls"
     elif "tern" in name:
-        return "4_Terns"
-    elif "sparrow" in name or "finch" in name:
-        return "5_Passerines_Songbirds"
+        return "33_Terns"
+    elif "duck" in name or "wigeon" in name or "teal" in name or "shelduck" in name or "scoter" in name or "merganser" in name or "goose" in name:
+        return "34_Ducks"
+    elif "rail" in name or "sora" in name or "gallinule" in name or "coot" in name:
+        return "35_Rails"
     elif "woodpecker" in name:
-        return "6_Woodpeckers"
-    elif "eagle" in name or "hawk" in name or "falcon" in name or "kite" in name:
-        return "7_Raptors"
+        return "4_Woodpeckers"
+    elif "hummingbird" in name:
+        return "5_Hummingbirds"
+    elif "jay" in name or "magpie" in name or "crow" in name or "raven" in name or "nutcracker" in name or "chough" in name:
+        return "61_Crows"
+    elif "koel" in name or "drongo" in name or "bushchat" in name or "robin" in name or "warbler" in name or "flycatcher" in name or "swallow" in name or "bulbul" in name or "shrike" in name or "minivet" in name or "sunbird" in name:
+        return "62_Blackbirds"
+    elif "pecker" in name or "swallow" in name or "bee-eater" in name or "leafbird" in name or "bluebird" in name or "bunting" in name:
+        return "7_Small_Birds"
+    elif "eagle" in name or "hawk" in name or "falcon" in name or "kite" in name or "hawk" in name or "vulture" in name or "shikra" in name or "condor" in name:
+        return "8_Raptors"
+    elif "parakeet" in name:
+        return "9_Parakeets"
     else:
-        return "8_Other_Species"
+        return "99_Other_Species"
 
 def analyze_bird_data(csv_path, output_cm="confusion_matrix.html", output_pr="labeled_precision_recall_curve.png"):
     """Compute and save a confusion matrix and precision-recall curve for classified birds."""
@@ -561,60 +604,75 @@ def analyze_bird_data(csv_path, output_cm="confusion_matrix.html", output_pr="la
     print(f"2. Number of images with no current_label: {no_current_label}")
 
     # Drop records missing labels needed for evaluation, then clean prefixes
-    eval_df = df.dropna(subset=["current_label", "top_label"]).copy()
+    eval_df = df.dropna(subset=["current_label", "refined_label"]).copy()
     eval_df["current_label"] = (
         eval_df["current_label"]
         .astype(str)
         .str.replace(r"^Manual:\s*", "", regex=True)
         .str.strip()
     )
-    eval_df["top_label"] = eval_df["top_label"].astype(str).str.strip()
+    eval_df["refined_label"] = (
+        eval_df["refined_label"]
+        .astype(str)
+        .str.split(" (", regex=False) 
+        .str[0]
+        .str.strip()
+    )
+    eval_df["current_label"] = (
+        eval_df["current_label"]
+        .astype(str)
+        .str.split(" (", regex=False)
+        .str[0]       
+        .str.strip()  
+    )
     eval_df["top_confidence"] = pd.to_numeric(eval_df["top_confidence"], errors="coerce").fillna(0)
 
-    CONFIDENCE_THRESHOLD = 0.25
-    filtered_df = eval_df[eval_df["top_confidence"] >= CONFIDENCE_THRESHOLD]
-    all_labels = sorted(list(set(filtered_df["current_label"]).union(set(filtered_df["top_label"]))))
-    raw_cm = confusion_matrix(filtered_df["current_label"], filtered_df["top_label"], labels=all_labels)
-    cm_df_raw = pd.DataFrame(raw_cm, index=all_labels, columns=all_labels)
+    filtered_df = eval_df[eval_df["top_confidence"] >= REGION_CONFIG[TARGET_REGION]["confidence_threshold_for_plot"]]
+    all_labels = sorted(list(set(filtered_df["current_label"]).union(set(filtered_df["refined_label"]))))
+    raw_cm = confusion_matrix(filtered_df["current_label"], filtered_df["refined_label"], labels=all_labels)
+    if raw_cm.sum() > 0:
+        cm_df_raw = pd.DataFrame(raw_cm, index=all_labels, columns=all_labels)
 
-    # Identify species with at least one misclassification
-    cm_raw_copy = np.copy(cm_df_raw.values)
-    np.fill_diagonal(cm_raw_copy, 0)
-    cm_errors_only = pd.DataFrame(cm_raw_copy, index=all_labels, columns=all_labels)
-    wrong_label_mask = (cm_errors_only.sum(axis=0) > 0) | (cm_errors_only.sum(axis=1) > 0)
-    active_species = cm_df_raw.loc[wrong_label_mask, wrong_label_mask].index.tolist()
+        # Identify species with at least one misclassification
+        cm_raw_copy = np.copy(cm_df_raw.values)
+        np.fill_diagonal(cm_raw_copy, 0)
+        cm_errors_only = pd.DataFrame(cm_raw_copy, index=all_labels, columns=all_labels)
+        wrong_label_mask = (cm_errors_only.sum(axis=0) > 0) | (cm_errors_only.sum(axis=1) > 0)
+        active_species = cm_df_raw.loc[wrong_label_mask, wrong_label_mask].index.tolist()
 
-    # Sort active species by taxonomy group
-    sorting_df = pd.DataFrame({"species": active_species})
-    sorting_df["group"] = sorting_df["species"].apply(assign_bird_group)
-    sorting_df = sorting_df.sort_values(by=["group", "species"])
-    grouped_sorted_labels = sorting_df["species"].tolist()
+        # Sort active species by taxonomy group
+        sorting_df = pd.DataFrame({"species": active_species})
+        sorting_df["group"] = sorting_df["species"].apply(assign_bird_group)
+        sorting_df = sorting_df.sort_values(by=["group", "species"])
+        grouped_sorted_labels = sorting_df["species"].tolist()
+        if not grouped_sorted_labels:
+            print("Skipping confusion matrix: no misclassified species to plot.")
+        else:
+            # Build and save the Plotly interactive confusion matrix
+            final_cm = confusion_matrix(filtered_df["current_label"], filtered_df["refined_label"], labels=grouped_sorted_labels)
+            fig = px.imshow(
+                final_cm,
+                x=grouped_sorted_labels,
+                y=grouped_sorted_labels,
+                labels=dict(x="Predicted Species", y="Ground Truth", color="Count"),
+                color_continuous_scale="Viridis",
+                title="Confusion Matrix"
+            )
 
-    # Build and save the Plotly interactive confusion matrix
-    final_cm = confusion_matrix(filtered_df["current_label"], filtered_df["top_label"], labels=grouped_sorted_labels)
-    fig = px.imshow(
-        final_cm,
-        x=grouped_sorted_labels,
-        y=grouped_sorted_labels,
-        labels=dict(x="Predicted Species", y="Ground Truth (Current Label)", color="Count"),
-        color_continuous_scale="Viridis",
-        title="Taxonomy-Grouped Zoomable Confusion Matrix"
-    )
+            fig.update_layout(
+                width=1100,
+                height=1000,
+                xaxis_tickangle=-90,
+                font=dict(size=10)
+            )
 
-    fig.update_layout(
-        width=1100,
-        height=1000,
-        xaxis_tickangle=-90,
-        font=dict(size=10)
-    )
-
-    fig.write_html(output_cm)
+            fig.write_html(output_cm)
 
     y_true_strings = eval_df["current_label"].values
-    y_pred_strings = eval_df["top_label"].values
+    y_pred_strings = eval_df["refined_label"].values
 
     # Build the full label set used in the confusion matrix
-    unique_labels = sorted(list(set(eval_df["current_label"]).union(set(eval_df["top_label"]))))
+    unique_labels = sorted(list(set(eval_df["current_label"]).union(set(eval_df["refined_label"]))))
 
     # Map top_confidence into an (N_samples, N_classes) probability grid:
     # the predicted class column gets the confidence score; all others get 0.
@@ -623,62 +681,65 @@ def analyze_bird_data(csv_path, output_cm="confusion_matrix.html", output_pr="la
         if pred_label in unique_labels:
             class_idx = unique_labels.index(pred_label)
             y_scores_multiclass[i, class_idx] = float(conf)
-
+ 
     # Binarize the ground-truth labels into a matching (N_samples, N_classes) matrix
     y_true_multiclass = label_binarize(y_true_strings, classes=unique_labels)
-
+ 
     # Handle edge case when the subset contains only 2 classes
     if y_true_multiclass.shape[1] == 1:
         y_true_multiclass = np.hstack((1 - y_true_multiclass, y_true_multiclass))
-
+ 
     # Compute the micro-averaged precision-recall curve across all classes
     precision_micro, recall_micro, thresholds_micro = precision_recall_curve(
         y_true_multiclass.ravel(),
         y_scores_multiclass.ravel()
     )
-
-    plt.figure(figsize=(10, 7))
-
-    plt.plot(recall_micro, precision_micro, color="blue", lw=2, label="Micro-averaged PR Curve", zorder=1)
-
-    sc = plt.scatter(recall_micro[:-1], precision_micro[:-1], c=thresholds_micro,
-                     cmap="viridis", s=35, zorder=2)
-    cbar = plt.colorbar(sc)
+ 
+    fig_pr, ax = plt.subplots(figsize=(10, 7))
+ 
+    sc = ax.scatter(recall_micro[:-1], precision_micro[:-1], c=thresholds_micro,
+                    cmap="viridis", s=60, zorder=3)
+    ax.plot(recall_micro, precision_micro, color="royalblue", lw=2,
+            label="Micro-averaged PR Curve", zorder=2)
+    cbar = fig_pr.colorbar(sc, ax=ax)
     cbar.set_label("Confidence Score")
-
-    # Annotate select confidence thresholds directly on the curve
-    target_labels = [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.85]
-    last_labeled_idx = -100  # Avoid crowding labels when points are close together
-
-    for target in target_labels:
-        idx = np.argmin(np.abs(thresholds_micro - target))
-
-        if abs(idx - last_labeled_idx) > 3 and idx < len(thresholds_micro):
-            x = recall_micro[idx]
-            y = precision_micro[idx]
-            val = thresholds_micro[idx]
-
-            plt.annotate(
-                f"{val:.2f}",
-                xy=(x, y),
-                xytext=(7, 7),
-                textcoords="offset points",
-                fontsize=9,
-                fontweight="bold",
-                color="black",
-                bbox=dict(boxstyle="round,pad=0.2", fc="white", ec="gray", alpha=0.8),
+ 
+    # Annotate key operating points with confidence, precision, and recall
+    n_points = len(thresholds_micro)
+    target_thresholds = REGION_CONFIG[TARGET_REGION]["pr_thresholds"]
+    offsets = [(10, -18), (10, 6), (-55, 10)]
+    for t, offset in zip(target_thresholds, offsets):
+        idx = np.argmin(np.abs(thresholds_micro - t))
+        if idx < n_points:
+            ax.annotate(
+                f"conf={thresholds_micro[idx]:.3f}\nP={precision_micro[idx]:.2f} R={recall_micro[idx]:.2f}",
+                xy=(recall_micro[idx], precision_micro[idx]),
+                xytext=offset, textcoords="offset points",
+                fontsize=8.5, fontweight="bold",
+                bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="gray", alpha=0.85),
+                arrowprops=dict(arrowstyle="->", color="gray", lw=0.8),
             )
-            last_labeled_idx = idx
-
-    plt.xlabel("Recall (Fraction of Birds Caught)")
-    plt.ylabel("Precision (Accuracy / Freedom from False Positives)")
-    plt.title("Multi-Class Precision-Recall Curve (With Direct Value Badges)")
-    plt.grid(True, linestyle="--", alpha=0.4)
-    plt.xlim([-0.05, 1.05])
-    plt.ylim([-0.05, 1.05])
+ 
+    # Reference line for exact-match accuracy
+    accuracy = (eval_df["current_label"] == eval_df["top_label"]).mean()
+    n_labeled = len(eval_df)
+    n_species = len(unique_labels)
+    ax.axhline(accuracy, color="tomato", linestyle="--", lw=1.2,
+               label=f"Exact-match accuracy: {accuracy:.1%}")
+ 
+    ax.set_xlabel("Recall (Fraction of Birds Caught)", fontsize=12)
+    ax.set_ylabel("Precision (Accuracy / Freedom from False Positives)", fontsize=12)
+    ax.set_title(
+        f"Multi-Class Precision-Recall Curve\n"
+        f"(parentheticals stripped — {n_labeled} labelled photos, {n_species} species)",
+        fontsize=12,
+    )
+    ax.set_xlim([-0.02, 1.05])
+    ax.set_ylim([0.85, 1.02])
+    ax.grid(True, linestyle="--", alpha=0.4)
+    ax.legend(fontsize=10)
     plt.tight_layout()
-    plt.savefig(output_pr, dpi=300)
-    plt.show()
+    plt.savefig(output_pr, dpi=180)
 
 
 def reconvert_to_predictions(summary_string):
