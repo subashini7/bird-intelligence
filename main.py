@@ -32,7 +32,7 @@ device = "mps" if torch.backends.mps.is_available() else "cpu"
 OUTPUT_FILE = "classified_birds_report.csv"
 ALBUM_NAME = "Birds"
 DATE_CUTOFF = date(2023, 6, 18)
-TARGET_REGION = "US"  # Change to "US", "India", "UK", or "Singapore" as needed
+TARGET_REGION = "India"  # Change to "US", "India", "UK", or "Singapore" as needed
 REGION_CONFIG = {
     "US": {
         "country_codes": {"US"},
@@ -589,7 +589,7 @@ def assign_bird_group(species_name):
     else:
         return "99_Other_Species"
 
-def analyze_bird_data(csv_path, output_cm="confusion_matrix.html", output_pr="labeled_precision_recall_curve.png"):
+def analyze_bird_data(csv_path, output_cm="confusion_matrix.png", output_pr="labeled_precision_recall_curve.png"):
     """Compute and save a confusion matrix and precision-recall curve for classified birds."""
     df = pd.read_csv(csv_path)
 
@@ -650,23 +650,21 @@ def analyze_bird_data(csv_path, output_cm="confusion_matrix.html", output_pr="la
         else:
             # Build and save the Plotly interactive confusion matrix
             final_cm = confusion_matrix(filtered_df["current_label"], filtered_df["refined_label"], labels=grouped_sorted_labels)
-            fig = px.imshow(
-                final_cm,
-                x=grouped_sorted_labels,
-                y=grouped_sorted_labels,
-                labels=dict(x="Predicted Species", y="Ground Truth", color="Count"),
-                color_continuous_scale="Viridis",
-                title="Confusion Matrix"
-            )
+            fig, ax = plt.subplots(figsize=(11, 10))
 
-            fig.update_layout(
-                width=1100,
-                height=1000,
-                xaxis_tickangle=-90,
-                font=dict(size=10)
-            )
-
-            fig.write_html(output_cm)
+            im = ax.imshow(final_cm, cmap="viridis")
+            cbar = fig.colorbar(im, ax=ax)
+            cbar.set_label("Count", fontsize=10)
+            ax.set_title("Confusion Matrix", fontsize=12, pad=15)
+            ax.set_xlabel("Predicted Species", fontsize=10)
+            ax.set_ylabel("Ground Truth", fontsize=10)
+            ax.set_xticks(range(len(grouped_sorted_labels)))
+            ax.set_yticks(range(len(grouped_sorted_labels)))
+            ax.set_xticklabels(grouped_sorted_labels, rotation=-90, fontsize=10)
+            ax.set_yticklabels(grouped_sorted_labels, fontsize=10)
+            plt.tight_layout()
+            plt.savefig(output_cm, dpi=300, bbox_inches="tight")
+            plt.close()
 
     y_true_strings = eval_df["current_label"].values
     y_pred_strings = eval_df["refined_label"].values
@@ -855,11 +853,13 @@ if __name__ == "__main__":
         )
 
     base_name = os.path.splitext(os.path.basename(OUTPUT_FILE))[0]
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_csv_filename = f"{TARGET_REGION}_{base_name}_{timestamp}.csv"
-    process_birds_album(detector, classifier, iqa_metric, output_csv_filename)
-    visualize_species_plotly(output_csv_filename)
+    #timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    output_csv_filename = 'India_classified_birds_report_20260529_091804.csv'
+    timestamp = '20260529_091804'
+    #output_csv_filename = f"{TARGET_REGION}_{base_name}_{timestamp}.csv"
+    #process_birds_album(detector, classifier, iqa_metric, output_csv_filename)
+    #visualize_species_plotly(output_csv_filename)
     analyze_bird_data(output_csv_filename,
-                    output_cm=f"{TARGET_REGION}_confusion_matrix_{timestamp}.html",
+                    output_cm=f"{TARGET_REGION}_confusion_matrix_{timestamp}.png",
                     output_pr=f"{TARGET_REGION}_precision_recall_curve_{timestamp}.png")
-    sync_keywords_from_csv(output_csv_filename)
+    #sync_keywords_from_csv(output_csv_filename)

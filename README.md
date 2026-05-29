@@ -210,10 +210,19 @@ At the operating threshold (conf ≥ 0.99): **P=0.95, R=0.89** across 176 specie
 
 ### Confusion Matrix
 The interactive confusion matrix (species ordered by taxonomic sequence) can be viewed here:
-👉 [Open Interactive Confusion Matrix](assets/US_confusion_matrix_20260529_104121.html)
+👉 [Open Interactive Confusion Matrix](assets/US_confusion_matrix_20260529_104121.png)
 
-> **Note:** The HTML confusion matrix must be viewed locally or via GitHub Pages — 
-> GitHub's README renderer does not display raw HTML files inline.
+## 📈 Model Performance (India Region)
+
+### Precision-Recall Curve
+![Precision-Recall Curve](assets/India_precision_recall_curve_20260529_091804.png)
+
+The curve shows model performance across the 0.99–1.00 confidence band used by the US pipeline.
+At the operating threshold (conf ≥ 0.99): **P=0.95, R=0.89** across 176 species.
+
+### Confusion Matrix
+The interactive confusion matrix (species ordered by taxonomic sequence) can be viewed here:
+👉 [Open Interactive Confusion Matrix](assets/India_confusion_matrix_20260529_091804.png)
 
 ## ⚖️ License
 This project is licensed under the MIT License. Models used: [Facebook DETR](https://huggingface.co/facebook/detr-resnet-50) and [Binocular Bird Classifier](https://huggingface.co/jiujiuche/binocular).
