@@ -82,7 +82,7 @@ def download_and_process(csv_name, region, region_id, detector, output_dir, limi
             response = requests.get(base_url, params=params, headers=headers)
             if response.status_code != 200:
                 print(f"Server error {response.status_code} for {sci_name}")
-                return
+                continue
 
             data = response.json()
             newly_saved = 0

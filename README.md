@@ -11,6 +11,8 @@ Standard AI models often lack the context to know that a specific bird shouldn't
 - **Scientific-to-Common Name Conversion:** Non-US regions map scientific model output to common names via `regional_birds.csv`.
 - **Bio-Geographic Overrides:** Spatial logic corrects species based on GPS coordinates (e.g., Island Scrub-Jay vs California Scrub-Jay).
 - **Taxonomic Grouping:** Combines confidence scores for difficult-to-distinguish groups (Hummingbirds, Gulls, Grebes, Cranes).
+- **Multi-Bird Classification:** Classifies photos with up to 2 detected birds. When 2 different species are identified, **two independent keywords** are written (e.g., `"Bird: House Sparrow"` and `"Bird: Common Myna"`), so Photos search works correctly for each species individually. Same-species detections produce a single tag.
+- **Crop Quality Guards:** Rejects crops smaller than 48×48 px or less than 0.1% of image area, preventing foliage blobs and distant specks from reaching the classifier.
 - **Quality Scoring:** Uses **NIQE** (Natural Image Quality Evaluator) to score sharpness of bird crops. Note: images with water or heavy foliage can skew scores; this metric is still being refined.
 
 ## 📊 Logic Engine: Handling AI Inconsistencies
@@ -52,44 +54,80 @@ Each region maintains a corrections table to fix systematic model errors:
 | Model Predicts | Corrected To |
 | :--- | :--- |
 | Whooper Swan | Mute Swan |
-| Marsh Sandpiper | Common Greenshank |
+| Ring-billed Gull | Common Gull |
 
 **India** (confidence threshold: > 31%)
 | Model Predicts | Corrected To |
 | :--- | :--- |
 | Great White Pelican | Spot-billed Pelican |
-| Ring-billed Gull | Common Gull |
+| Marsh Sandpiper | Common Greenshank |
 | Tawny Eagle | Black Kite |
 | Dusky Crag-Martin | Little Cormorant |
 | Thick-billed Flowerpecker | Ashy Woodswallow |
 | Blue-cheeked Bee-eater | Blue-tailed Bee-eater |
+
+### 5. Date-Specific Corrections (US Only)
+Rare one-off sightings that the model cannot know about are stored in `us_date_corrections.csv`. Each row maps a `(date, from_label)` pair to a corrected species. Edit the CSV to add new entries — no code change required.
+
+### 6. Composite Label Exclusion from Evaluation (US Only)
+Intentionally ambiguous labels (`Gull`, `Hummingbird`, `Crane`, `Western/Clark's Grebe`, `Green Heron or Young Black-crowned Night-Heron`) are excluded from the F1 chart and confusion matrix. They represent deliberate uncertainty decisions — not model errors — and including them would distort per-species metrics. Configured via `composite_labels` in `REGION_CONFIG`.
+
+## 📈 Analytics & Visualizations
+
+Each run produces the following output files (all timestamped):
+
+**Project root**
+| File | Type | Description |
+| :--- | :--- | :--- |
+| `{region}_classified_birds_report_{ts}.csv` | CSV | Per-photo detection and classification results |
+| `{region}_classified_birds_report_{ts}.html` | Plotly | Interactive species distribution bar chart |
+| `{region}_geo_map_{ts}.html` | Plotly | Geographic scatter map of labeled photo locations |
+| `{region}_temporal_{ts}.html` | Plotly | Bird photos per calendar month |
+
+**`assets/` folder**
+| File | Type | Description |
+| :--- | :--- | :--- |
+| `assets/{region}_confusion_matrix_{ts}.png` | PNG | Confusion matrix ordered by taxonomic group (composite labels excluded) |
+| `assets/{region}_precision_recall_curve_{ts}.png` | PNG | Micro-averaged PR curve with adaptive y-axis and annotated operating points |
+| `assets/{region}_f1_by_species_{ts}.html` | Plotly | Per-species F1 sorted ascending — includes species with F1=0 (never confidently predicted) |
+| `assets/{region}_confidence_histogram_{ts}.png` | PNG | Correct vs incorrect confidence distributions with operating threshold line |
+| `assets/{region}_coverage_precision_{ts}.png` | PNG | Coverage (fraction labeled) at each precision level — operating point annotated at label-generation threshold |
+
+**mAP** (macro-averaged) is also printed to stdout for quick cross-region comparison.
+
+### Keyword Sync Behaviour
+`sync_keywords_from_csv` writes `Bird:` keywords back to Photos after each run:
+- **2-bird photos:** two separate keywords written (`Bird: Species1`, `Bird: Species2`) — each is independently searchable
+- **Manual tag matching:** if a photo has `Manual:` tags, all of them must match the predicted species as a set (case-insensitive) before the sync proceeds; partial matches leave the photo untouched
+- **Ground truth fallback:** `Manual:` tags are used as `current_label` ground truth when `Bird:` tags haven't been synced yet, ensuring evaluation metrics are correct on first run
 
 ## 🛠️ Architecture
 ```mermaid
 graph TD
     A[Apple Photos] --> B[osxphotos Library]
     B --> C[DETR: Object Detection]
-    C --> D{Bird Count = 1?}
-    D -- Yes --> E{Check TARGET_REGION}
-    D -- No --> I[Log Count Only]
-    E -- US --> F1[Binocular Model from HF]
-    E -- Singapore --> F2[StandaloneInferenceModel<br/>probe_best.pth]
-    E -- India --> F3[StandaloneInferenceModel<br/>fine_tune_best.pth]
-    E -- UK --> F4[StandaloneInferenceModel<br/>fine_tune_best.pth]
-    F1 --> G[Species ID]
-    F2 --> G
-    F3 --> G
-    F4 --> G
-    G --> H{Apply Region Logic}
-    H -- US --> J1[Geo + Taxonomy Rules<br/>Conf > 99%]
-    H -- Singapore --> J2[Scientific → Common Name<br/>Conf > 40%]
-    H -- India --> J3[Scientific → Common Name<br/>Corrections · Conf > 31%]
-    H -- UK --> J4[Scientific → Common Name<br/>Corrections · Conf > 30%]
-    J1 --> K[Set refined_label]
-    J2 --> K
-    J3 --> K
-    J4 --> K
-    K --> M[Write Keyword to Photos App]
+    C --> D{Bird Count ≤ 2?}
+    D -- "> 2 or 0" --> I[Log Count Only]
+    D -- "1 or 2" --> E[Crop Quality Guard\n48px min · 0.1% area min]
+    E --> F{Check TARGET_REGION}
+    F -- US --> G1[Binocular Model from HF]
+    F -- Singapore --> G2[StandaloneInferenceModel\nprobe_best.pth]
+    F -- India --> G3[StandaloneInferenceModel\nfine_tune_best.pth]
+    F -- UK --> G4[StandaloneInferenceModel\nfine_tune_best.pth]
+    G1 --> H[Species ID per Bird]
+    G2 --> H
+    G3 --> H
+    G4 --> H
+    H --> J{Apply Region Logic}
+    J -- US --> K1[Geo + Taxonomy Rules\nConf > 99%]
+    J -- Singapore --> K2[Scientific → Common Name\nConf > 40%]
+    J -- India --> K3[Scientific → Common Name\nCorrections · Conf > 31%]
+    J -- UK --> K4[Scientific → Common Name\nCorrections · Conf > 30%]
+    K1 --> L[Merge Bird Labels]
+    K2 --> L
+    K3 --> L
+    K4 --> L
+    L --> M[Write Keyword to Photos App]
 ```
 
 ## 💻 Setup & Installation
@@ -123,54 +161,12 @@ Edit `TARGET_REGION` and `REGION_CONFIG` at the top of `main.py`:
 
 ```python
 TARGET_REGION = "India"  # Options: "US", "Singapore", "India", "UK"
-
-REGION_CONFIG = {
-    "US": {
-        "country_codes": {"US"},
-        "classifier": {
-            "repo_id": "jiujiuche/binocular",
-            "filename": "artifacts/dinov2_vitb14_nabirds.pth",
-            "is_standalone": False,
-        },
-        "use_scientific_to_common": False,
-    },
-    "Singapore": {
-        "country_codes": {"SG"},
-        "classifier": {
-            "repo_id": "pshops/dinov2-singapore-birds",
-            "filename": "probe_best.pth",
-            "is_standalone": True,
-        },
-        "use_scientific_to_common": True,
-        "mapping_csv": "regional_birds.csv",
-    },
-    "India": {
-        "country_codes": {"IN"},
-        "classifier": {
-            "repo_id": "pshops/dinov2-india-birds",
-            "filename": "fine_tune_best.pth",
-            "is_standalone": True,
-        },
-        "use_scientific_to_common": True,
-        "mapping_csv": "regional_birds.csv",
-    },
-    "UK": {
-        "country_codes": {"GB"},
-        "classifier": {
-            "repo_id": "pshops/dinov2-uk-birds",
-            "filename": "fine_tune_best.pth",
-            "is_standalone": True,
-        },
-        "use_scientific_to_common": True,
-        "mapping_csv": "regional_birds.csv",
-    },
-}
 ```
 
 ### Region Behaviour Summary
 | Region | Model Source | Confidence Threshold | Name Conversion | Extra Logic |
 | :--- | :--- | :--- | :--- | :--- |
-| US | Binocular (HF) | 99% | — | Geo overrides, taxonomy grouping |
+| US | Binocular (HF) | 99% | — | Geo overrides, taxonomy grouping, date corrections CSV |
 | Singapore | Standalone (HF) | 40% | Scientific → Common | — |
 | India | Standalone (HF) | 31% | Scientific → Common | Species corrections |
 | UK | Standalone (HF) | 30% | Scientific → Common | Species corrections |
@@ -178,7 +174,7 @@ REGION_CONFIG = {
 ## 🌍 Non-US Bird Data with iNaturalist
 For regions outside the US, use `inaturalist.py` to download training data.
 - Fetches bird observations from iNaturalist for a given region or place ID.
-- Downloads and crops approximately 30 images per species.
+- Downloads and crops approximately 30 images per species (single-bird crops only).
 - Saves images into folders named `processed_<region>_birds`.
 
 ```bash
@@ -189,8 +185,7 @@ python inaturalist.py
 After collecting regional images, use `dinov2_probe_fine_tune.py` to adapt the model:
 - **Linear probe** — trains a classification head on frozen DINOv2 features.
 - **Fine-tune** — unfreezes the encoder for deeper adaptation to local species.
-
-Upload the resulting checkpoint to Hugging Face for use in `REGION_CONFIG`.
+- Uses a **stratified 80/20 train/val split** to guarantee every species appears in both sets, which matters when each class has only ~30 images.
 
 ```bash
 # Step 1: linear probe
@@ -203,29 +198,29 @@ python dinov2_probe_fine_tune.py --epochs 30 --lr 1e-5 --resume <path_to_probe_b
 ## 📈 Model Performance (US Region)
 
 ### Precision-Recall Curve
-![Precision-Recall Curve](assets/US_precision_recall_curve_20260529_104121.png)
+![Precision-Recall Curve](assets/US_precision_recall_curve_20260602_093211.png)
 
 The curve shows model performance across the 0.99–1.00 confidence band used by the US pipeline.
 At the operating threshold (conf ≥ 0.99): **P=0.95, R=0.89** across 176 species.
 
 ### Confusion Matrix
 The confusion matrix (species ordered by taxonomic sequence)
-![Confusion Matrix](assets/US_confusion_matrix_20260529_104121.png)
+![Confusion Matrix](assets/US_confusion_matrix_20260602_093211.png)
 The model recognizes juvenile Black-crowned Night Heron as Green Heron; rare Eurasian Wigeon as American Wigeon; 
-Humming birds, Gulls, Grebes and Woodpeckers seperation has to be improved further with training. 
+Hummingbirds, Gulls, Grebes and Woodpeckers separation has to be improved further with training.
 
 ## 📈 Model Performance (India Region)
 
 ### Precision-Recall Curve
-![Precision-Recall Curve](assets/India_precision_recall_curve_20260529_091804.png)
+![Precision-Recall Curve](assets/India_precision_recall_curve_20260602_102101.png)
 
 The curve shows model performance across the confidence band used by the India region pipeline.
-At the operating threshold (conf ≥ 0.31): **P=0.96, R=0.9** across 82 species.
+At the operating threshold (conf ≥ 0.31): **mAP=0.562** across 82 species.
 
 ### Confusion Matrix
 The confusion matrix (species ordered by taxonomic sequence)
-![Confusion Matrix](assets/India_confusion_matrix_20260529_091804.png)
-Egrets, Cormorants, Gulls & Terns and Black birds are the ones that the model need to trained on to improve the performance further.
+![Confusion Matrix](assets/India_confusion_matrix_20260602_102101.png)
+Egrets, Cormorants, Gulls & Terns and Blackbirds are the ones that the model needs to be trained on to improve performance further.
 
 ## ⚖️ License
 This project is licensed under the MIT License. Models used: [Facebook DETR](https://huggingface.co/facebook/detr-resnet-50) and [Binocular Bird Classifier](https://huggingface.co/jiujiuche/binocular).

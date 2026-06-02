@@ -7,7 +7,8 @@ processed_*.zip
 processed_*/
 *classified*.html
 *classified_*.csv
-*confusion_matrix*.html
+*temporal*.html
+*geo_map*.html
 
 # --- Python Environment ---
 __pycache__/

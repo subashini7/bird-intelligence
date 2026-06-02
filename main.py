@@ -1,6 +1,5 @@
 import csv
 import os
-import re
 from datetime import date, datetime
 
 import cv2
@@ -19,7 +18,12 @@ from Binocular.models.inference import InferenceModel
 from dotenv import load_dotenv
 from huggingface_hub import hf_hub_download
 from PIL import Image
-from sklearn.metrics import confusion_matrix, precision_recall_curve, average_precision_score
+from sklearn.metrics import (
+    average_precision_score,
+    classification_report,
+    confusion_matrix,
+    precision_recall_curve,
+)
 from sklearn.preprocessing import label_binarize
 from torchvision import transforms
 from transformers import pipeline
@@ -31,7 +35,7 @@ MANUAL_PREFIX = "Manual: "
 device = "mps" if torch.backends.mps.is_available() else "cpu"
 OUTPUT_FILE = "classified_birds_report.csv"
 ALBUM_NAME = "Birds"
-DATE_CUTOFF = date(2023, 6, 18)
+DATE_CUTOFF = date(2024, 3, 28)
 TARGET_REGION = "India"  # Change to "US", "India", "UK", or "Singapore" as needed
 REGION_CONFIG = {
     "US": {
@@ -42,8 +46,23 @@ REGION_CONFIG = {
             "is_standalone": False,
         },
         "use_scientific_to_common": False,
-        "confidence_threshold_for_plot": 0.90,
-        "pr_thresholds": [0.990, 0.995, 1.000],
+        "confidence_threshold_for_plot": 0.99,
+        "pr_thresholds": [0.5, 0.990, 0.995, 1.000],
+        "composite_labels": {
+            "Gull",
+            "Hummingbird",
+            "Crane",
+            "Western/Clark's Grebe",
+            "Green Heron or Young Black-crowned Night-Heron",
+        },
+        "composite_constituent_species": {
+            "Anna's Hummingbird",
+            "Allen's Hummingbird",
+            "Rufous Hummingbird",
+            "Black-chinned Hummingbird",
+            "Calliope Hummingbird",
+            "Costa's Hummingbird",
+        },
     },
     "Singapore": {
         "country_codes": {"SG"},
@@ -53,7 +72,7 @@ REGION_CONFIG = {
             "is_standalone": True,
         },
         "use_scientific_to_common": True,
-        "confidence_threshold_for_plot": 0.10,
+        "confidence_threshold_for_plot": 0.40,
         "pr_thresholds": [0.40, 0.55, 0.70],
         "mapping_csv": "regional_birds.csv",
     },
@@ -65,7 +84,7 @@ REGION_CONFIG = {
             "is_standalone": True,
         },
         "use_scientific_to_common": True,
-        "confidence_threshold_for_plot": 0.21,
+        "confidence_threshold_for_plot": 0.31,
         "pr_thresholds": [0.31, 0.50, 0.70],
         "mapping_csv": "regional_birds.csv",
     },
@@ -77,7 +96,7 @@ REGION_CONFIG = {
             "is_standalone": True,
         },
         "use_scientific_to_common": True,
-        "confidence_threshold_for_plot": 0.21,
+        "confidence_threshold_for_plot": 0.31,
         "pr_thresholds": [0.30, 0.50, 0.70],
         "mapping_csv": "regional_birds.csv",
     },
@@ -145,6 +164,22 @@ def get_region_scientific_to_common_map():
 SCIENTIFIC_TO_COMMON = get_region_scientific_to_common_map()
 
 
+def load_date_corrections(csv_path=None):
+    """Load per-date species corrections from us_date_corrections.csv."""
+    if csv_path is None:
+        csv_path = os.path.join(os.path.dirname(__file__), "us_rare_bird_date_corrections.csv")
+    if not os.path.exists(csv_path):
+        return {}
+    df = pd.read_csv(csv_path)
+    return {
+        (str(row["date"]).strip(), str(row["from_label"]).strip()): str(row["to_label"]).strip()
+        for _, row in df.iterrows()
+    }
+
+
+DATE_CORRECTIONS = load_date_corrections()
+
+
 def get_common_name(scientific_name: str) -> str:
     base_name = scientific_name.split(" (")[0].strip()
     return SCIENTIFIC_TO_COMMON.get(
@@ -154,6 +189,11 @@ def get_common_name(scientific_name: str) -> str:
 
 def convert_predictions_to_common(predictions):
     return [(get_common_name(label), score) for label, score in predictions]
+
+
+def normalize_label(label: str) -> str:
+    """Normalize hyphens and spelling variants for cross-region species name comparison."""
+    return label.replace("-", " ").replace("Gray", "Grey").strip()
 
 
 def make_tag(label: str) -> str:
@@ -185,7 +225,7 @@ def sync_keywords_from_csv(csv_filename: str):
     for photo in target_album.photos():
         fname = photo.filename
         current_keywords = photo.keywords
-        manual_tag = next((k for k in current_keywords if k.startswith(MANUAL_PREFIX)), None)
+        manual_tags = [k for k in current_keywords if k.startswith(MANUAL_PREFIX)]
         cleaned_keywords = [k for k in current_keywords if not is_bird_tag(k) and not k.startswith(MANUAL_PREFIX)]
 
         if fname not in label_map:
@@ -194,29 +234,36 @@ def sync_keywords_from_csv(csv_filename: str):
 
         new_label = label_map[fname]
 
-        if manual_tag:
-            manual_label = manual_tag.removeprefix(MANUAL_PREFIX).strip()
-            if manual_label != new_label:
-                # Manual label disagrees — leave everything untouched
+        # Split "Species1 / Species2" into individual tags; deduplicate same species.
+        new_tags = list(dict.fromkeys(
+            make_tag(s.strip()) for s in new_label.split(" / ") if s.strip()
+        ))
+        new_species = {s.strip() for s in new_label.split(" / ") if s.strip()}
+
+        if manual_tags:
+            manual_species = {t.removeprefix(MANUAL_PREFIX).strip() for t in manual_tags}
+            if {normalize_label(s).lower() for s in manual_species} != {normalize_label(s).lower() for s in new_species}:
+                # At least one manual tag disagrees — leave everything untouched
                 continue
-            # Manual label matches — replace "Manual: X" with the clean bird tag
-            if new_label:
-                print(f"  {fname}: Manual tag to Bird '{manual_label}' → '{new_label}'")
-                photo.keywords = cleaned_keywords + [make_tag(new_label)]
+            # Every manual tag matches — replace all "Manual: X" with Bird: tag(s)
+            if new_tags:
+                print(f"  {fname}: Manual tags {sorted(manual_species)} → '{new_label}'")
+                photo.keywords = cleaned_keywords + new_tags
                 updated += 1
             else:
                 photo.keywords = cleaned_keywords
                 cleared += 1
         else:
-            # No manual tag — look for an existing Bird: tag and report changes
-            existing_bird_tag = next((k for k in current_keywords if is_bird_tag(k)), None)
-            existing_label = existing_bird_tag.removeprefix("Bird: ").strip() if existing_bird_tag else None
+            # No manual tag — compare species sets to avoid false positives from order differences
+            existing_bird_tags = [k for k in current_keywords if is_bird_tag(k)]
+            existing_species = {t.removeprefix("Bird: ").strip() for t in existing_bird_tags}
 
-            if new_label and existing_label != new_label:
-                print(f"  {fname}: '{existing_label}' → '{new_label}'")
+            if {normalize_label(s) for s in existing_species} == {normalize_label(s) for s in new_species}:
+                continue
 
-            if new_label:
-                photo.keywords = cleaned_keywords + [make_tag(new_label)]
+            if new_tags:
+                print(f"  {fname}: '{' / '.join(sorted(existing_species))}' → '{new_label}'")
+                photo.keywords = cleaned_keywords + new_tags
                 updated += 1
             else:
                 photo.keywords = cleaned_keywords
@@ -290,10 +337,8 @@ def get_refined_us_label(predictions, lat, lon, date):
     }
     if base_refined_label in corrections:
         refined_label = corrections[base_refined_label]
-    elif base_refined_label == "Ring-necked Duck" and date == "2025-02-08":
-        refined_label = "Tufted Duck"
-    elif base_refined_label == "Bald Eagle" and date == "2025-11-28":
-        refined_label = "California Condor"
+    elif (date, base_refined_label) in DATE_CORRECTIONS:
+        refined_label = DATE_CORRECTIONS[(date, base_refined_label)]
     elif base_refined_label in {
         "Eastern Bluebird",
         "Gila Woodpecker",
@@ -324,7 +369,14 @@ def detect_classify(photo, is_in_region, detector, classifier, iqa_metric):
     top_label = ""
     top_confidence = 0
     refined_label = ""
-    current_label = photo.keywords[0].replace(BIRD_TAG_PREFIX, "") if photo.keywords else ""
+    bird_kws = sorted(k.replace(BIRD_TAG_PREFIX, "") for k in photo.keywords if is_bird_tag(k))
+    if bird_kws:
+        current_label = " / ".join(bird_kws)
+    else:
+        # Bird: tags are written by sync_keywords_from_csv which runs after this scan.
+        # Use Manual: tags as ground truth when Bird: tags haven't been synced yet.
+        manual_kws = sorted(k.removeprefix(MANUAL_PREFIX).strip() for k in photo.keywords if k.startswith(MANUAL_PREFIX))
+        current_label = " / ".join(manual_kws) if manual_kws else ""
 
     try:
         if (
@@ -351,46 +403,57 @@ def detect_classify(photo, is_in_region, detector, classifier, iqa_metric):
                 raise ValueError("OpenCV failed to read image")
 
             scores = []
+            bird_labels = []  # (refined_label, top_label, top_confidence, top_5_summary)
             loc_data = photo.location
+
+            # DETR's pipeline loads via PIL (EXIF-aware); cv2.imread ignores EXIF
+            # rotation.  Clamp and crop in PIL space so coordinates always match.
+            pil_w, pil_h = image.size
+            image_area = pil_w * pil_h
 
             for b in birds:
                 box = b["box"]
-                h, w = img_cv.shape[:2]
                 x1 = max(0, int(box["xmin"]))
                 y1 = max(0, int(box["ymin"]))
-                x2 = min(w, int(box["xmax"]))
-                y2 = min(h, int(box["ymax"]))
-               
-                if (y2 - y1) <= 10 or (x2 - x1) <= 10:
-                    continue
-                
-                crop_cv = img_cv[y1:y2, x1:x2]
-                scores.append(get_bird_quality_score(crop_cv, iqa_metric))
+                x2 = min(pil_w, int(box["xmax"]))
+                y2 = min(pil_h, int(box["ymax"]))
+                crop_w, crop_h = x2 - x1, y2 - y1
 
-                if len(birds) == 1 and is_in_region:
-                    crop_pil = Image.fromarray(cv2.cvtColor(crop_cv, cv2.COLOR_BGR2RGB))
+                # Reject crops that are too small in absolute terms or relative to
+                # the image — filters foliage blobs, reflections, and distant specks.
+                if crop_w < 48 or crop_h < 48 or (crop_w * crop_h) < 0.001 * image_area:
+                    continue
+
+                crop_pil = image.crop((x1, y1, x2, y2))
+                crop_cv = cv2.cvtColor(np.array(crop_pil), cv2.COLOR_RGB2BGR)
+                try:
+                    scores.append(get_bird_quality_score(crop_cv, iqa_metric))
+                except Exception:
+                    scores.append(0.0)
+
+                if len(birds) <= 2 and is_in_region:
                     predictions = classifier.predict(crop_pil, top_k=5)
                     if REGION_CONFIG.get(TARGET_REGION, {}).get(
                         "use_scientific_to_common", False
                     ):
                         predictions = convert_predictions_to_common(predictions)
-                    refined_label = ""
-                    top_label, top_confidence = predictions[0]
+                    bird_refined = ""
+                    bird_top_label, bird_top_conf = predictions[0]
                     if TARGET_REGION == "Singapore":
-                        if top_confidence > 0.40:
-                            refined_label = top_label
+                        if bird_top_conf > 0.40:
+                            bird_refined = bird_top_label
                     elif TARGET_REGION == "UK":
-                        if top_confidence > 0.31:
-                            refined_label = top_label
+                        if bird_top_conf > 0.31:
+                            bird_refined = bird_top_label
                         corrections = {
                             "Whooper Swan": "Mute Swan",
-                             "Ring-billed Gull": "Common Gull",
+                            "Ring-billed Gull": "Common Gull",
                         }
-                        if refined_label in corrections:
-                            refined_label = corrections[refined_label]
+                        if bird_refined in corrections:
+                            bird_refined = corrections[bird_refined]
                     elif TARGET_REGION == "India":
-                        if top_confidence > 0.31:
-                            refined_label = top_label
+                        if bird_top_conf > 0.31:
+                            bird_refined = bird_top_label
                         # There are confusions between Whiskered and Gull-billed Tern;
                         # Little and Indian Cormorant; Little, Medium and Great Egret;
                         # Inidan Robin => Pied Bushcat; Pied Bushcat => Black Drongo
@@ -402,34 +465,54 @@ def detect_classify(photo, is_in_region, detector, classifier, iqa_metric):
                             "Dusky Crag-Martin": "Little Cormorant",
                             "Thick-billed Flowerpecker": "Ashy Woodswallow",
                             "Blue-cheeked Bee-eater": "Blue-tailed Bee-eater",
+                            "Western Yellow Wagtail": "Eastern Yellow Wagtail",
+                            "Lesser Flamingo": "Greater Flamingo",
                         }
-                        if refined_label in corrections:
-                            refined_label = corrections[refined_label]
+                        if bird_refined in corrections:
+                            bird_refined = corrections[bird_refined]
                     elif TARGET_REGION == "US":
-                        refined_label = get_refined_us_label(
+                        bird_refined = get_refined_us_label(
                             predictions,
                             loc_data[0],
                             loc_data[1],
                             photo.date.strftime("%Y-%m-%d"),
                         )
 
-                    pred_list = [
-                        f"{label} ({score:.2%})" for label, score in predictions
-                    ]
-                    top_5_summary = " | ".join(pred_list)
+                    bird_top_5 = " | ".join(f"{label} ({score:.2%})" for label, score in predictions)
+                    bird_labels.append((bird_refined, bird_top_label, bird_top_conf, bird_top_5))
 
-                    print(f"\n--- Predictions for {display_name} ---")
+                    print(f"\n--- Predictions for {display_name} (bird {len(bird_labels)}) ---")
                     for label, score in predictions:
                         print(f"Species: {label:30} | Confidence: {score:.2%}")
                     cv2.putText(
                         img_cv,
-                        refined_label,
+                        bird_refined,
                         (x1, y1 - 40),
                         cv2.FONT_HERSHEY_SIMPLEX,
                         1.2,
                         (255, 255, 0),
                         3,
                     )
+
+            # Merge per-bird results into photo-level fields
+            if len(bird_labels) == 1:
+                refined_label, top_label, top_confidence, top_5_summary = bird_labels[0]
+            elif len(bird_labels) == 2:
+                r1, t1, c1, s1 = bird_labels[0]
+                r2, t2, c2, s2 = bird_labels[1]
+                (r_hi, t_hi, c_hi, s_hi), (r_lo, _, _, _) = (
+                    (bird_labels[0], bird_labels[1]) if c1 >= c2
+                    else (bird_labels[1], bird_labels[0])
+                )
+                top_label, top_confidence, top_5_summary = t_hi, c_hi, s_hi
+                if not r_hi and not r_lo:
+                    refined_label = ""
+                elif not r_lo or r_hi == r_lo:
+                    refined_label = r_hi
+                elif not r_hi:
+                    refined_label = r_lo
+                else:
+                    refined_label = f"{r_hi} / {r_lo}"
 
             avg_quality = sum(scores) / len(scores) if scores else 0.0
             if loc_data:
@@ -552,44 +635,72 @@ def visualize_species_plotly(csv_filename):
 
 
 def assign_bird_group(species_name):
-    """
-    Helper function to categorize bird names into taxonomy groups.
-    Adjust the strings below to match your exact CSV spelling (case-insensitive).
-    """
     name = str(species_name).lower()
 
-    if "egret" in name or "heron" in name:
+    # 1. Waders — egrets, herons, ibis, spoonbills, bitterns
+    if any(x in name for x in ["egret", "heron", "ibis", "spoonbill", "bittern"]):
         return "1_Waders_Egrets_Herons"
-    elif "pelican" in name:
-        return "2_Pelicans"
-    elif "cormorant" in name or "shag" in name or "grebe" in name or "martin" in name or "phalarope" in name or "loon" in name or "murre" in name:
+    # 2. Pelicans and large seabirds
+    elif any(x in name for x in ["pelican", "gannet", "booby", "frigatebird"]):
+        return "2_Pelicans_Seabirds"
+    # 31. Water divers — cormorants, grebes, loons, alcids
+    elif any(x in name for x in ["cormorant", "shag", "grebe", "loon", "murre",
+                                  "guillemot", "auklet", "puffin", "murrelet", "razorbill"]):
         return "31_WaterDivers"
-    elif "gull" in name or "kittiwake" in name:
+    # 32. Gulls
+    elif any(x in name for x in ["gull", "kittiwake"]):
         return "32_Gulls"
+    # 33. Terns
     elif "tern" in name:
         return "33_Terns"
-    elif "duck" in name or "wigeon" in name or "teal" in name or "shelduck" in name or "scoter" in name or "merganser" in name or "goose" in name:
+    # 34. Waterfowl — ducks, geese, swans; includes diving ducks missing from original
+    elif any(x in name for x in ["duck", "wigeon", "teal", "shelduck", "scoter", "merganser",
+                                  "goose", "mallard", "goldeneye", "canvasback", "bufflehead",
+                                  "scaup", "redhead", "eider", "pintail", "shoveler"]):
         return "34_Ducks"
-    elif "rail" in name or "sora" in name or "gallinule" in name or "coot" in name:
+    # 35. Rails and coots
+    elif any(x in name for x in ["rail", "sora", "gallinule", "coot"]):
         return "35_Rails"
-    elif "woodpecker" in name:
+    # 36. Shorebirds — stilts, avocets, plovers, sandpipers, phalaropes, etc.
+    elif any(x in name for x in ["stilt", "avocet", "plover", "sandpiper", "dowitcher",
+                                  "yellowlegs", "willet", "turnstone", "dunlin", "oystercatcher",
+                                  "godwit", "curlew", "whimbrel", "sanderling", "phalarope",
+                                  "snipe", "woodcock", "surfbird", "tattler", "knot"]):
+        return "36_Shorebirds"
+    # 4. Woodpeckers, flickers, sapsuckers
+    elif any(x in name for x in ["woodpecker", "flicker", "sapsucker"]):
         return "4_Woodpeckers"
+    # 5. Hummingbirds
     elif "hummingbird" in name:
         return "5_Hummingbirds"
-    elif "jay" in name or "magpie" in name or "crow" in name or "raven" in name or "nutcracker" in name or "chough" in name:
-        return "61_Crows"
-    elif "koel" in name or "drongo" in name or "bushchat" in name or "robin" in name or "warbler" in name or "flycatcher" in name or "swallow" in name or "bulbul" in name or "shrike" in name or "minivet" in name or "sunbird" in name:
-        return "62_Blackbirds"
-    elif "pecker" in name or "swallow" in name or "bee-eater" in name or "leafbird" in name or "bluebird" in name or "bunting" in name:
-        return "7_Small_Birds"
-    elif "eagle" in name or "hawk" in name or "falcon" in name or "kite" in name or "hawk" in name or "vulture" in name or "shikra" in name or "condor" in name:
+    # 8. Raptors — checked before swallows to catch Swallow-tailed Kite
+    elif any(x in name for x in ["eagle", "hawk", "falcon", "kite", "vulture",
+                                  "shikra", "condor", "osprey", "harrier"]):
         return "8_Raptors"
-    elif "parakeet" in name:
+    # 61. Corvids
+    elif any(x in name for x in ["jay", "magpie", "crow", "raven", "nutcracker", "chough"]):
+        return "61_Crows"
+    # 62. Blackbirds, grackles, cowbirds, orioles (US + India)
+    elif any(x in name for x in ["grackle", "cowbird", "blackbird", "oriole", "meadowlark",
+                                  "koel", "drongo", "bushchat", "bulbul", "shrike", "minivet", "sunbird"]):
+        return "62_Blackbirds"
+    # 63. Thrushes, robins, flycatchers, warblers, swallows, martins
+    elif any(x in name for x in ["robin", "thrush", "bluebird", "flycatcher", "warbler",
+                                  "swallow", "martin"]):
+        return "63_Thrushes_Warblers"
+    # 7. Small passerines — sparrows, finches, buntings, juncos, towhees (US + India)
+    elif any(x in name for x in ["sparrow", "finch", "bunting", "junco", "towhee",
+                                  "bee-eater", "leafbird"]):
+        return "7_Small_Birds"
+    # 9. Parakeets and parrots
+    elif any(x in name for x in ["parakeet", "parrot"]):
         return "9_Parakeets"
     else:
         return "99_Other_Species"
 
-def analyze_bird_data(csv_path, output_cm="confusion_matrix.png", output_pr="labeled_precision_recall_curve.png"):
+def analyze_bird_data(csv_path, output_cm="confusion_matrix.png", output_pr="labeled_precision_recall_curve.png",
+                      output_f1="f1_by_species.html", output_conf="confidence_histogram.png",
+                      output_cov="coverage_precision.png"):
     """Compute and save a confusion matrix and precision-recall curve for classified birds."""
     df = pd.read_csv(csv_path)
 
@@ -603,31 +714,91 @@ def analyze_bird_data(csv_path, output_cm="confusion_matrix.png", output_pr="lab
     no_current_label = df[birds_one_mask]["current_label"].isna().sum()
     print(f"2. Number of images with no current_label: {no_current_label}")
 
-    # Drop records missing labels needed for evaluation, then clean prefixes
-    eval_df = df.dropna(subset=["current_label", "refined_label"]).copy()
+    # Require ground truth (current_label) but allow empty refined_label — species
+    # the model never predicts above threshold would otherwise be invisible in F1.
+    eval_df = df.dropna(subset=["current_label"]).copy()
     eval_df["current_label"] = (
         eval_df["current_label"]
         .astype(str)
         .str.replace(r"^Manual:\s*", "", regex=True)
-        .str.strip()
-    )
-    eval_df["refined_label"] = (
-        eval_df["refined_label"]
-        .astype(str)
-        .str.split(" (", regex=False) 
+        .str.split(" (", regex=False)
         .str[0]
         .str.strip()
     )
-    eval_df["current_label"] = (
-        eval_df["current_label"]
+    eval_df = eval_df[eval_df["current_label"] != ""].copy()
+    # Empty refined_label (below-threshold photos) becomes "" — treated as no prediction
+    eval_df["refined_label"] = (
+        eval_df["refined_label"]
+        .fillna("")
         .astype(str)
         .str.split(" (", regex=False)
-        .str[0]       
-        .str.strip()  
+        .str[0]
+        .str.strip()
+    )
+    # Normalize hyphens so "Black-crowned Night-Heron" == "Black-crowned Night Heron"
+    eval_df["current_label"] = eval_df["current_label"].apply(normalize_label)
+    eval_df["refined_label"] = eval_df["refined_label"].apply(
+        lambda x: normalize_label(x) if x else x
     )
     eval_df["top_confidence"] = pd.to_numeric(eval_df["top_confidence"], errors="coerce").fillna(0)
 
-    filtered_df = eval_df[eval_df["top_confidence"] >= REGION_CONFIG[TARGET_REGION]["confidence_threshold_for_plot"]]
+    # Expand 2-bird rows into individual species rows for evaluation.
+    # Matched species (appear in both current and refined) are paired as correct.
+    # Species only in current_label become (species, "") — missed detections.
+    # Species only in refined_label become ("", species) — spurious detections.
+    expanded_rows = []
+    for _, row in eval_df.iterrows():
+        cp = sorted(s.strip() for s in str(row["current_label"]).split(" / ") if s.strip())
+        rp = sorted(s.strip() for s in str(row["refined_label"]).split(" / ") if s.strip())
+        if len(cp) > 1 or len(rp) > 1:
+            cp_remaining = list(cp)
+            rp_remaining = list(rp)
+            # First pass: match species present in both lists
+            for species in list(cp_remaining):
+                if species in rp_remaining:
+                    nr = row.copy()
+                    nr["current_label"] = species
+                    nr["refined_label"] = species
+                    expanded_rows.append(nr)
+                    cp_remaining.remove(species)
+                    rp_remaining.remove(species)
+            # Remaining current species had no prediction
+            for species in cp_remaining:
+                nr = row.copy()
+                nr["current_label"] = species
+                nr["refined_label"] = rp_remaining.pop(0) if rp_remaining else ""
+                expanded_rows.append(nr)
+            # Any leftover predictions have no ground truth
+            for pred in rp_remaining:
+                nr = row.copy()
+                nr["current_label"] = ""
+                nr["refined_label"] = pred
+                expanded_rows.append(nr)
+        else:
+            expanded_rows.append(row)
+    eval_df = pd.DataFrame(expanded_rows, columns=eval_df.columns).reset_index(drop=True)
+    eval_df = eval_df[eval_df["current_label"] != ""].copy()
+
+    # Exclude composite/grouped labels from all evaluation — they represent
+    # intentional ambiguity, not model errors, and distort F1 and confusion matrix.
+    composite_labels = {normalize_label(l) for l in REGION_CONFIG[TARGET_REGION].get("composite_labels", set())}
+    if composite_labels:
+        excluded = eval_df["refined_label"].isin(composite_labels) | eval_df["current_label"].isin(composite_labels)
+        print(f"Excluded {excluded.sum()} composite-label rows from evaluation.")
+        eval_df = eval_df[~excluded].copy()
+
+    # Exclude constituent species whose photos are predominantly routed to a composite
+    # label — their remaining rows (below threshold) would give a misleading F1=0.
+    composite_constituents = {normalize_label(l) for l in REGION_CONFIG[TARGET_REGION].get("composite_constituent_species", set())}
+    if composite_constituents:
+        excluded_c = eval_df["current_label"].isin(composite_constituents)
+        print(f"Excluded {excluded_c.sum()} constituent-species rows from evaluation.")
+        eval_df = eval_df[~excluded_c].copy()
+
+    filtered_df = eval_df[
+        (eval_df["top_confidence"] >= REGION_CONFIG[TARGET_REGION]["confidence_threshold_for_plot"]) &
+        (eval_df["refined_label"] != "")
+    ]
     all_labels = sorted(list(set(filtered_df["current_label"]).union(set(filtered_df["refined_label"]))))
     raw_cm = confusion_matrix(filtered_df["current_label"], filtered_df["refined_label"], labels=all_labels)
     if raw_cm.sum() > 0:
@@ -732,31 +903,102 @@ def analyze_bird_data(csv_path, output_cm="confusion_matrix.png", output_pr="lab
         f"(parentheticals stripped — {n_labeled} labelled photos, {n_species} species)",
         fontsize=12,
     )
+    pr_y_min = max(0.0, float(np.nanmin(precision_micro)) - 0.05)
     ax.set_xlim([-0.02, 1.05])
-    ax.set_ylim([0.85, 1.02])
+    ax.set_ylim([pr_y_min, 1.02])
     ax.grid(True, linestyle="--", alpha=0.4)
     ax.legend(fontsize=10)
     plt.tight_layout()
     plt.savefig(output_pr, dpi=180)
+    plt.close()
 
+    # mAP
+    try:
+        mAP = average_precision_score(y_true_multiclass, y_scores_multiclass, average="macro")
+        print(f"mAP (macro-averaged): {mAP:.3f}")
+    except Exception:
+        pass
 
-def reconvert_to_predictions(summary_string):
-    """Parse a top-5 summary string back into a list of (label, score) tuples."""
-    if not isinstance(summary_string, str) or not summary_string.strip():
-        return []
+    # Per-species F1 chart
+    report = classification_report(
+        eval_df["current_label"], eval_df["refined_label"],
+        output_dict=True, zero_division=0,
+    )
+    n_unlabeled = (eval_df["refined_label"] == "").sum()
+    if n_unlabeled:
+        print(f"{n_unlabeled} photos had a ground-truth label but no prediction (below confidence threshold).")
+    f1_rows = [
+        {"Species": k, "F1": v["f1-score"], "Precision": v["precision"],
+         "Recall": v["recall"], "Support": int(v["support"])}
+        for k, v in report.items()
+        if k not in {"accuracy", "macro avg", "weighted avg", "micro avg", ""}
+    ]
+    f1_df = pd.DataFrame(f1_rows).sort_values("F1")
+    fig_f1 = px.bar(
+        f1_df, x="F1", y="Species", orientation="h",
+        title=f"Per-Species F1 Score — {TARGET_REGION}",
+        color="F1", color_continuous_scale="RdYlGn",
+        hover_data={"Precision": ":.2f", "Recall": ":.2f", "Support": True},
+        range_x=[0, 1],
+        height=max(600, len(f1_df) * 22),
+    )
+    fig_f1.update_layout(yaxis={"dtick": 1}, margin=dict(l=200))
+    fig_f1.write_html(output_f1)
+    print(f"Per-species F1 chart saved as {output_f1}")
 
-    predictions = []
-    for entry in summary_string.split(" | "):
-        match = re.search(r"\(([\d.]+)%\)$", entry.strip())
-        if match:
-            try:
-                score_str = match.group(1)
-                score = float(score_str) / 100.0
-                label = entry.replace(f"({score_str}%)", "").strip()
-                predictions.append((label, score))
-            except ValueError:
-                continue  # Skip malformed entries
-    return predictions
+    # Confidence histogram — correct vs incorrect predictions
+    op_thresh = REGION_CONFIG[TARGET_REGION]["confidence_threshold_for_plot"]
+    eval_df["correct"] = eval_df["current_label"] == eval_df["refined_label"]
+    correct_conf = eval_df[eval_df["correct"]]["top_confidence"]
+    wrong_conf = eval_df[~eval_df["correct"]]["top_confidence"]
+    fig_hist, ax_h = plt.subplots(figsize=(10, 6))
+    bins = np.linspace(0, 1, 30)
+    ax_h.hist(correct_conf, bins=bins, alpha=0.6, color="seagreen",
+              label=f"Correct ({len(correct_conf)})")
+    ax_h.hist(wrong_conf, bins=bins, alpha=0.6, color="tomato",
+              label=f"Wrong ({len(wrong_conf)})")
+    ax_h.axvline(op_thresh, color="navy", linestyle="--", lw=1.5,
+                 label=f"Operating threshold ({op_thresh})")
+    ax_h.set_xlabel("Top Confidence Score", fontsize=12)
+    ax_h.set_ylabel("Number of Photos", fontsize=12)
+    ax_h.set_title(f"Confidence Distribution: Correct vs Incorrect — {TARGET_REGION}", fontsize=13)
+    ax_h.legend(fontsize=10)
+    ax_h.grid(True, linestyle="--", alpha=0.4)
+    plt.tight_layout()
+    plt.savefig(output_conf, dpi=180)
+    plt.close()
+    print(f"Confidence histogram saved as {output_conf}")
+
+    # Coverage @ Precision curve
+    conf_sweep = np.linspace(0, 1, 200)
+    coverages, precisions_sweep = [], []
+    for t in conf_sweep:
+        subset = eval_df[eval_df["top_confidence"] >= t]
+        coverages.append(len(subset) / len(eval_df))
+        precisions_sweep.append(
+            (subset["current_label"] == subset["refined_label"]).mean() if len(subset) > 0 else 1.0
+        )
+    fig_cov, ax_c = plt.subplots(figsize=(10, 6))
+    ax_c.plot(precisions_sweep, coverages, color="steelblue", lw=2)
+    idx_op = int(np.argmin(np.abs(conf_sweep - op_thresh)))
+    ax_c.scatter([precisions_sweep[idx_op]], [coverages[idx_op]], color="tomato", s=80, zorder=5)
+    ax_c.annotate(
+        f"conf={op_thresh:.2f}\nP={precisions_sweep[idx_op]:.2f}  Coverage={coverages[idx_op]:.2f}",
+        xy=(precisions_sweep[idx_op], coverages[idx_op]),
+        xytext=(15, -30), textcoords="offset points", fontsize=9, fontweight="bold",
+        bbox=dict(boxstyle="round,pad=0.3", fc="white", ec="gray", alpha=0.85),
+        arrowprops=dict(arrowstyle="->", color="gray", lw=0.8),
+    )
+    ax_c.set_xlabel("Precision (Accuracy among labeled photos)", fontsize=12)
+    ax_c.set_ylabel("Coverage (Fraction of photos labeled)", fontsize=12)
+    ax_c.set_title(f"Coverage @ Precision — {TARGET_REGION}", fontsize=13)
+    ax_c.set_xlim([0, 1.05])
+    ax_c.set_ylim([0, 1.05])
+    ax_c.grid(True, linestyle="--", alpha=0.4)
+    plt.tight_layout()
+    plt.savefig(output_cov, dpi=180)
+    plt.close()
+    print(f"Coverage @ Precision curve saved as {output_cov}")
 
 
 class StandaloneInferenceModel:
@@ -828,6 +1070,60 @@ class StandaloneInferenceModel:
         return predictions
 
 
+def visualize_geo_temporal(csv_filename, output_geo, output_temporal):
+    """Generate an interactive geographic scatter map and a monthly temporal bar chart."""
+    df = pd.read_csv(csv_filename)
+
+    # Geographic scatter map — only photos that have GPS and a refined label
+    df_geo = df[
+        df["location"].notna()
+        & (df["location"].astype(str).str.strip() != "No GPS Data")
+        & df["refined_label"].notna()
+        & (df["refined_label"].astype(str).str.strip() != "")
+    ].copy()
+
+    if not df_geo.empty:
+        coords = df_geo["location"].str.split(", ", expand=True)
+        df_geo["lat"] = pd.to_numeric(coords[0], errors="coerce")
+        df_geo["lon"] = pd.to_numeric(coords[1], errors="coerce")
+        df_geo = df_geo.dropna(subset=["lat", "lon"])
+        fig_geo = px.scatter_mapbox(
+            df_geo, lat="lat", lon="lon",
+            color="refined_label",
+            hover_name="display_name",
+            hover_data={"date": True, "top_confidence": ":.2%", "lat": False, "lon": False},
+            title=f"Bird Photo Locations — {TARGET_REGION}",
+            mapbox_style="open-street-map",
+            zoom=4,
+            height=700,
+        )
+        fig_geo.update_layout(margin=dict(l=0, r=0, t=40, b=0))
+        fig_geo.write_html(output_geo)
+        print(f"Geographic map saved as {output_geo}")
+    else:
+        print("No geo data with labels available for map.")
+
+    # Temporal distribution — photos per calendar month
+    df["date_parsed"] = pd.to_datetime(df["date"], errors="coerce", format="%Y-%m-%d %H:%M:%S")
+    df_time = df.dropna(subset=["date_parsed"]).copy()
+    if not df_time.empty:
+        df_time["month"] = df_time["date_parsed"].dt.to_period("M").astype(str)
+        monthly = df_time.groupby("month").size().reset_index(name="Photos")
+        monthly = monthly.sort_values("month")
+        fig_time = px.bar(
+            monthly, x="month", y="Photos",
+            title=f"Bird Photos per Month — {TARGET_REGION}",
+            labels={"month": "Month", "Photos": "Number of Photos"},
+            color="Photos",
+            color_continuous_scale="Blues",
+        )
+        fig_time.update_layout(xaxis_tickangle=-45, title_font_size=16)
+        fig_time.write_html(output_temporal)
+        print(f"Temporal distribution chart saved as {output_temporal}")
+    else:
+        print("No date data available for temporal chart.")
+
+
 if __name__ == "__main__":
     print(f"Loading DETR on {device}...")
     detector = pipeline(
@@ -853,13 +1149,24 @@ if __name__ == "__main__":
         )
 
     base_name = os.path.splitext(os.path.basename(OUTPUT_FILE))[0]
-    #timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_csv_filename = 'India_classified_birds_report_20260529_091804.csv'
-    timestamp = '20260529_091804'
-    #output_csv_filename = f"{TARGET_REGION}_{base_name}_{timestamp}.csv"
-    #process_birds_album(detector, classifier, iqa_metric, output_csv_filename)
-    #visualize_species_plotly(output_csv_filename)
-    analyze_bird_data(output_csv_filename,
-                    output_cm=f"{TARGET_REGION}_confusion_matrix_{timestamp}.png",
-                    output_pr=f"{TARGET_REGION}_precision_recall_curve_{timestamp}.png")
-    #sync_keywords_from_csv(output_csv_filename)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    #output_csv_filename = 'US_classified_birds_report_20260530_220257.csv'
+    #timestamp = '20260530_220257'
+    output_csv_filename = f"{TARGET_REGION}_{base_name}_{timestamp}.csv"
+    process_birds_album(detector, classifier, iqa_metric, output_csv_filename)
+    visualize_species_plotly(output_csv_filename)
+    visualize_geo_temporal(
+        output_csv_filename,
+        output_geo=f"{TARGET_REGION}_geo_map_{timestamp}.html",
+        output_temporal=f"{TARGET_REGION}_temporal_{timestamp}.html",
+    )
+    os.makedirs("assets", exist_ok=True)
+    analyze_bird_data(
+        output_csv_filename,
+        output_cm=f"assets/{TARGET_REGION}_confusion_matrix_{timestamp}.png",
+        output_pr=f"assets/{TARGET_REGION}_precision_recall_curve_{timestamp}.png",
+        output_f1=f"assets/{TARGET_REGION}_f1_by_species_{timestamp}.html",
+        output_conf=f"assets/{TARGET_REGION}_confidence_histogram_{timestamp}.png",
+        output_cov=f"assets/{TARGET_REGION}_coverage_precision_{timestamp}.png",
+    )
+    sync_keywords_from_csv(output_csv_filename)
